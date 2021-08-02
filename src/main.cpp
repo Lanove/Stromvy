@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 #include <ClickEncoder.h>
+#include <Eeprom24C04_16.h>
+#define EEPROM_ADDRESS 0x50
 
 #define LED_LDON PB7
 #define LED_ST2 PB6
@@ -12,8 +15,8 @@
 #define ENC_BTN PA15
 #define ENC_STEPS 4
 
-#define LCD_SDA PB10
-#define LCD_SCL PB11
+#define LCD_SDA PB11
+#define LCD_SCL PB10
 
 #define BUZZER PB14
 
@@ -37,22 +40,27 @@
 
 ClickEncoder encoder(ENC_CLK, ENC_DT, ENC_BTN, ENC_STEPS);
 DigitalButton loadButton(LD_BTN);
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+static Eeprom24C04_16 eeprom(EEPROM_ADDRESS);
 
 int16_t oldEncPos, encPos;
 uint8_t buttonState;
-
 
 void setup()
 {
   Serial.begin(115200);
   Serial.printf("Halo");
+  Wire.setSDA(LCD_SDA);
+  Wire.setSCL(LCD_SCL);
+  lcd.begin();
+  lcd.print("Hello World!");
   // pinMode(LED_PC13, OUTPUT);
   // pinMode(LED_LDON, OUTPUT);
   // pinMode(LED_ST1, OUTPUT);
   // pinMode(LED_ST2, OUTPUT);
   // pinMode(BUZZER, OUTPUT);
   pinMode(LD_EN, OUTPUT);
-  digitalWrite(LD_EN,HIGH);
+  digitalWrite(LD_EN, HIGH);
   //   pinMode(LOGIC_OUTPUT1, OUTPUT);
   //   digitalWrite(LOGIC_OUTPUT1,HIGH);
   // pinMode(LOGIC_OUTPUT2, OUTPUT);
@@ -74,24 +82,59 @@ void setup()
 
   oldEncPos = -1;
   HAL_Delay(1000);
+  while (!Serial)
+    ;
+
+  const word address = 0;
+  const byte count = 94;
+
+  // Declare byte arrays.
+  byte inputBytes[count] = {0};
+  byte outputBytes[count] = {0};
+
+  // Fill input array with printable characters. See ASCII table for more
+  // details.
+  for (byte i = 0; i < count; i++)
+  {
+    inputBytes[i] = i + 33;
+  }
+
+  // Write input array to EEPROM memory.
+  Serial.println("Write bytes to EEPROM memory...");
+  // eeprom.writeBytes(address, count, inputBytes);
+
+  // Read array with bytes read from EEPROM memory.
+  Serial.println("Read bytes from EEPROM memory...");
+  eeprom.readBytes(address, count, outputBytes);
+
+  // Print read bytes.
+  Serial.println("Read bytes:");
+  for (byte i = 0; i < count; i++)
+  {
+    Serial.write(outputBytes[i]);
+    Serial.print(" ");
+  }
+  Serial.println("");
   // put your setup code here, to run once:
 }
 
 bool lastButtonReading;
-unsigned long milliser,miles;
+unsigned long milliser, miles;
 bool nota;
 
 void loop()
 {
-  if(millis() - miles >= 200)
+  if (millis() - miles >= 200)
   {
     miles = millis();
-    Serial.println();
-    Serial.println(analogRead(V_READ));
-    Serial.println(analogRead(I_READ));
-    Serial.println(analogRead(NTC1));
-    Serial.println(analogRead(NTC2));
-    Serial.println(analogRead(PA4));
+    // Serial.println();
+    // Serial.println(analogRead(V_READ));
+    // Serial.println(analogRead(I_READ));
+    // Serial.println(analogRead(NTC1));
+    // Serial.println(analogRead(NTC2));
+    // Serial.println(analogRead(PA4));
+    lcd.setCursor(0, 1);
+    lcd.printf("V_READ : %d", analogRead(V_READ));
   }
   if (millis() - milliser >= 5000)
   {
