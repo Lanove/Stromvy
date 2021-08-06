@@ -4,6 +4,9 @@
 #include <ClickEncoder.h>
 #include <Eeprom24C04_16.h>
 #include "stm32f1xx_hal.h"
+#include <RunningAverage.h>
+#include "ADS1X15.h"
+
 #define EEPROM_ADDRESS 0x50
 
 #define LED_LDON PB7
@@ -30,13 +33,9 @@
 #define LOGIC_OUTPUT1_TIMER_CHANNEL 3
 #define LOGIC_OUTPUT2_TIMER_CHANNEL 4
 
-#define I_READ PA0
-#define V_READ PA1
 #define NTC1 PA2
 #define NTC2 PA3
 
-#define I_READ_ADC_CHANNEL ADC_CHANNEL_0
-#define V_READ_ADC_CHANNEL ADC_CHANNEL_1
 #define NTC1_ADC_CHANNEL ADC_CHANNEL_2
 #define NTC2_ADC_CHANNEL ADC_CHANNEL_3
 
@@ -59,7 +58,9 @@ uint8_t buttonState;
 
 HardwareTimer *pwmTimer = new HardwareTimer(TIM4);
 HardwareTimer *fanTimer = new HardwareTimer(TIM3);
-ADC_HandleTypeDef adcHandler;
+ADS1115 ADS(0x4A);
+RunningAverage voltageAverage(10);
+RunningAverage currentAverage(10);
 
 bool polarity;
 unsigned long recorder, period, counter;
@@ -67,8 +68,6 @@ unsigned long recorder, period, counter;
 void setupPWM();
 void testCallback();
 static void MX_GPIO_Init(void);
-static void MX_ADC1_Init(void);
-uint16_t adcRead(uint32_t channel);
 
 void setup()
 {
@@ -79,7 +78,8 @@ void setup()
   lcd.begin();
   lcd.print("Hello World!");
   MX_GPIO_Init();
-  MX_ADC1_Init();
+  pinMode(NTC1,INPUT_ANALOG);
+  pinMode(NTC2,INPUT_ANALOG);
   digitalWrite(LD_EN, HIGH);
   setupPWM();
   analogReadResolution(12);
@@ -92,6 +92,13 @@ void setup()
   HAL_Delay(1000);
   while (!Serial)
     ;
+  if (!ADS.begin())
+  {
+    Serial.println("Failed to initialize ADS.");
+    while (1)
+      ;
+  }
+  ADS.setGain(1);
 }
 
 bool lastButtonReading;
@@ -103,21 +110,21 @@ void loop()
   if (millis() - miles >= 200)
   {
     miles = millis();
-    // Serial.println();
-    // Serial.println(analogRead(V_READ));
-    // Serial.println(analogRead(I_READ));
-    // Serial.println(analogRead(NTC1));
-    // Serial.println(analogRead(NTC2));
-    // Serial.println(analogRead(PA4));
-    int vread = adcRead(V_READ_ADC_CHANNEL);
-    int iread = adcRead(I_READ_ADC_CHANNEL);
-    int ntc1 = adcRead(NTC1_ADC_CHANNEL);
-    int ntc2 = adcRead(NTC2_ADC_CHANNEL);
+    int ntc1 = analogRead(NTC1_ADC_CHANNEL);
+    int ntc2 = analogRead(NTC2_ADC_CHANNEL);
+    
+    int16_t val_0 = ADS.readADC(0);
+    int16_t val_1 = ADS.readADC(1);
+
+    voltageAverage.addValue(val_0);
+    currentAverage.addValue(val_1);
+    float f = ADS.toVoltage(1); // voltage factor
+
     lcd.setCursor(0, 1);
-    lcd.printf("V_READ : %04d", vread);
+    lcd.printf("V_ads:%4f", voltageAverage.getAverage()*f*7.20174);
     lcd.setCursor(0, 2);
-    lcd.printf("I_READ : %04d", iread);
-    Serial.printf("V:%d ; I:%d ; NTC1:%d ; NTC2:%d\n", vread, iread, ntc1, ntc2);
+    lcd.printf("I_ads:%4f", currentAverage.getAverage()*f*1.7728055);
+    // Serial.printf("V_int:%f ; I_int:%f\n", float(vread)*0.0008056640625, float(iread)*0.0008056640625);
   }
   if (millis() - milliser >= 5000)
   {
@@ -150,8 +157,8 @@ void loop()
 
   if (buttonState != 0)
   {
-    Serial.print("Button: ");
-    Serial.println(buttonState);
+    // Serial.print("Button: ");
+    // Serial.println(buttonState);
     switch (buttonState)
     {
     case ClickEncoder::Open: //0
@@ -189,67 +196,15 @@ void setupPWM()
   // set PWM frequency to 14.4kHz (72MHz/5000=14.4KHz)
   pwmTimer->setOverflow(5000); // in TICK FORMAT
   // set fan PWM frequency to 100Hz
-  fanTimer->setOverflow(100, HERTZ_FORMAT); // in TICK FORMAT
+  fanTimer->setOverflow(100, HERTZ_FORMAT); // in Hertz FORMAT
 
-  fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, 50, PERCENT_COMPARE_FORMAT); // 50%
+  fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, 70, PERCENT_COMPARE_FORMAT); // 50%
 
   pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, 5000); // 100%
   pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, 2500); // 50%
 
   pwmTimer->resume();
   fanTimer->resume();
-}
-
-uint16_t adcRead(uint32_t channel)
-{
-  ADC_ChannelConfTypeDef adcConfig = {0};
-  uint16_t adcResult = 0;
-  adcConfig.Channel = channel;
-  adcConfig.Rank = ADC_REGULAR_RANK_1;
-  adcConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
-  if (HAL_ADC_ConfigChannel(&adcHandler, &adcConfig) != HAL_OK)
-  {
-    Serial.printf("HAL_ADC_ConfigChannel%d\n", channel);
-    return 0;
-  }
-  if (HAL_ADCEx_Calibration_Start(&adcHandler) != HAL_OK)
-  {
-    Serial.println("HAL_ADCEx_Calibration FAIL");
-    return 0;
-  }
-  if (HAL_ADC_Start(&adcHandler) != HAL_OK)
-  {
-    Serial.println("HAL_ADC_Start FAIL");
-    return 0;
-  }
-  if (HAL_ADC_PollForConversion(&adcHandler, 10) == HAL_OK)
-    adcResult = HAL_ADC_GetValue(&adcHandler);
-  else
-  {
-    Serial.println("HAL_ADC_PollForConversion FAIL");
-    return 0;
-  }
-  if (HAL_ADC_Stop(&adcHandler) != HAL_OK)
-  {
-    Serial.println("HAL_ADC_Stop FAIL");
-    return 0;
-  }
-  return adcResult;
-}
-
-static void MX_ADC1_Init(void)
-{
-  adcHandler.Instance = ADC1;
-  adcHandler.Init.ScanConvMode = ADC_SCAN_DISABLE;
-  adcHandler.Init.ContinuousConvMode = DISABLE;
-  adcHandler.Init.DiscontinuousConvMode = DISABLE;
-  adcHandler.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  adcHandler.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  adcHandler.Init.NbrOfConversion = 1;
-  if (HAL_ADC_Init(&adcHandler) != HAL_OK)
-    Serial.println("HAL_ADC_INIT FAIL");
-  if (HAL_ADCEx_Calibration_Start(&adcHandler) != HAL_OK)
-    Serial.println("HAL_ADCEx_Calibration FAIL");
 }
 
 static void MX_GPIO_Init(void)
@@ -267,7 +222,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_All, GPIO_PIN_RESET);
 
   // Configure Analog Input pins from PORT A
-  GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3;
+  GPIO_InitStruct.Pin = GPIO_PIN_2 | GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
