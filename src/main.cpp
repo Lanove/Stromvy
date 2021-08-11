@@ -1,56 +1,7 @@
-#include <Arduino.h>
-#include <LiquidCrystal_I2C.h>
-#include <Wire.h>
-#include <ClickEncoder.h>
-#include <Eeprom24C04_16.h>
-#include "stm32f1xx_hal.h"
-#include <RunningAverage.h>
-#include "ADS1X15.h"
-
-#define EEPROM_ADDRESS 0x50
-
-#define LED_LDON PB7
-#define LED_ST2 PB6
-#define LED_ST1 PB5 //problem
-#define LED_PC13 PC13
-
-#define ENC_CLK PB4
-#define ENC_DT PB3
-#define ENC_BTN PA15
-#define ENC_STEPS 4
-
-#define LCD_SDA PB11
-#define LCD_SCL PB10
-
-#define BUZZER PB14
-
-#define LD_BTN PA13
-#define LD_EN PA14
-
-#define LOGIC_OUTPUT1 PB0
-#define LOGIC_OUTPUT2 PB1
-
-#define LOGIC_OUTPUT1_TIMER_CHANNEL 3
-#define LOGIC_OUTPUT2_TIMER_CHANNEL 4
-
-#define NTC1 PA2
-#define NTC2 PA3
-
-#define NTC1_ADC_CHANNEL ADC_CHANNEL_2
-#define NTC2_ADC_CHANNEL ADC_CHANNEL_3
-
-#define CC_IND PB12
-#define CV_IND PB13
-
-#define I_SET PB8
-#define V_SET PB9
-
-#define I_SET_TIMER_CHANNEL 3
-#define V_SET_TIMER_CHANNEL 4
+#include <globals.h>
 
 ClickEncoder encoder(ENC_CLK, ENC_DT, ENC_BTN, ENC_STEPS);
 DigitalButton loadButton(LD_BTN);
-LiquidCrystal_I2C lcd(0x27, 20, 4);
 static Eeprom24C04_16 eeprom(EEPROM_ADDRESS);
 
 int16_t oldEncPos, encPos;
@@ -75,8 +26,6 @@ void setup()
   Serial.printf("Halo");
   Wire.setSDA(LCD_SDA);
   Wire.setSCL(LCD_SCL);
-  lcd.begin();
-  lcd.print("Hello World!");
   MX_GPIO_Init();
   pinMode(NTC1,INPUT_ANALOG);
   pinMode(NTC2,INPUT_ANALOG);
@@ -119,11 +68,6 @@ void loop()
     voltageAverage.addValue(val_0);
     currentAverage.addValue(val_1);
     float f = ADS.toVoltage(1); // voltage factor
-
-    lcd.setCursor(0, 1);
-    lcd.printf("V_ads:%4f", voltageAverage.getAverage()*f*7.20174);
-    lcd.setCursor(0, 2);
-    lcd.printf("I_ads:%4f", currentAverage.getAverage()*f*1.7728055);
     // Serial.printf("V_int:%f ; I_int:%f\n", float(vread)*0.0008056640625, float(iread)*0.0008056640625);
   }
   if (millis() - milliser >= 5000)
