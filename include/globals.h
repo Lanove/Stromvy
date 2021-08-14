@@ -10,9 +10,14 @@
 
 #define PIN_DEFINE
 
+#define MODE_CC 0
+#define MODE_CV 1
+
+#define STATUS_ON 1
+#define STATUS_OFF 0
+
 #define EEPROM_ADDRESS 0x50
 
-#ifdef PIN_DEFINE
 #define MAX_V_ADC 4095
 #define MAX_I_ADC 4095
 #define MIN_FAN_PWM 0
@@ -21,6 +26,8 @@
 #define MAX_FAN_TEMP 125
 #define MAX_CALIBRATION_FACTOR 10.0000
 #define MIN_CALIBRATION_FACTOR 0.0001
+
+#ifdef PIN_DEFINE
 
 #define LED_LDON PB7
 #define LED_ST2 PB6
@@ -62,25 +69,34 @@
 #define V_SET_TIMER_CHANNEL 4
 #endif
 
+// SCREEN_MAIN VARIABLES
 extern float sensedVoltage, // variable to store real sensed voltage on terminal, used on main and lcdController
     sensedCurrent,          // variable to store real sensed current flow to load, used on main and lcdController
     sensedPower,            // variable to store real power dissipated by load, used on main and lcdController
-    mWhTotal,               // variable to keep track total watthour has been used, used on main and lcdController
-    mAhTotal,               // variable to keep track total amphour has been used,used on main and lcdController
-    presetValue;            // the preset value of the load whether it's current/voltage/power or resistance, used on main and lcdController
-extern uint8_t opMode,      // current operation of the load(SB/CC/CV/CP/CR/ER/PD/CU/TN), used on main and lcdController
-    ldMode;                 // intended operation of the load (CC/CV/CP/CR), used on main and lcdController
-extern float fetTemperature;
-extern float CULV,          // Low voltage cut-off value, load operation will set to CU if voltage goes below this value, CUV_MIN is ignored
-             CUHV,          // High voltage cut-off value, load operation will set to CU if voltage goes above this value, CUV_MAX or above is ignored
-             CULA,          // Low current cut-off value, load operation will set to CU if current goes below this value, CUA_MIN is ignored
-             CUHA,          // High current cut-off value, load operation will set to CU if current goes above this value, CUA_MAX or above is ignored
-             CULP,          // Low power cut-off value, load operation will set to CU if power goes below this value, CUP_MIN is ignored
-             CUHP;          // High power cut-off value, load operation will set to CU if power goes above this value, CUP_MAX or above is ignored
-extern float calibrationVoltageFactor, // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
-             calibrationCurrentFactor; // Stored on EEPROM on save, sensed current will be multiplied by this factor before shown on LCD
-extern float overTempPoint, // Stored on EEPROM on save, if the temperature of FET goes above this, system will set operation mode to ERROR
-             fanTempPoint, // Stored on EEPROM on save, if the temperature of FET goes above this, fan will be turned on
-             fanTempHysteresis; // Stored on EEPROM on save, if the temperature goes below fanTempPoint-fanTempHysteresis fan will be turned off
-extern uint32_t timeRunning; // variable to keep track total time running, used on main and lcdController
-extern uint32_t timerDuration; // variable to store timer duration that user intended, if value is 0 then no timer
+    presetVoltage,          // The preset value of real voltage
+    presetCurrent,          // The preset value of real current
+    bjtTemp;                // The measured temperature of the output BJT
+extern bool ldStatus,       // Load status, whether it's ON or OFF
+    opMode,                 // Current operation of Power supply which is CC or CV
+    timerStatus;            // Timer status, whether it's ON or OFF
+// SCREEN_MENU VARIABLES
+extern uint32_t timerDuration; // variable to store timer duration that user intended, if value is 0 then timer is OFF
+// SCREEN_ENERGY VARIABLES
+extern float mWhTotal,       // Total energy used by load in mWh
+    mAhTotal;                // Total energy used by load in mAh
+extern uint32_t timeRunning; // variable to keep track total time running, recorded when ldStatus is ON and paused when ldStatus is OFF
+// SCREEN_LOG VARIABLES
+extern uint32_t logInterval; // The interval logging value spit out on UART port
+extern bool logStatus;       // the status of logging, enabled or disable
+// SCREEN_FAN VARIABLES
+extern uint8_t minPWMLO1, // Stored on EEPROM on save, minimum PWM value for logic output 1
+    maxPWMLO1,            // Stored on EEPROM on save, maximum PWM value for logic output 1
+    minPWMLO2,            // Stored on EEPROM on save, minimum PWM value for logic output 2
+    maxPWMLO2;            // Stored on EEPROM on save, maximum PWM value for logic output 2
+extern float maxTemp,     // Stored on EEPROM on save, maximum temperature for logic output (logic output will put out maximum PWM value if temperature is higher or equal maxTemp)
+    minTemp;              // Stored on EEPROM on save, minimum temperature for logic output (logic output will put out minimum PWM value if temperature is lower or equal to minTemp)
+// SCREEN_CAL VARIABLES
+extern float presetVoltageFactor, // Stored on EEPROM on save, preset voltage will be multiplied by this factor before shown on LCD
+    presetCurrentFactor,          // Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
+    sensedCurrentFactor,          // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+    sensedVoltageFactor;          // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD

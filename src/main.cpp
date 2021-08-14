@@ -1,8 +1,34 @@
 #include <globals.h>
 
+float sensedVoltage,       // variable to store real sensed voltage on terminal, used on main and lcdController
+    sensedCurrent,         // variable to store real sensed current flow to load, used on main and lcdController
+    sensedPower,           // variable to store real power dissipated by load, used on main and lcdController
+    presetVoltage,         // The preset value of real voltage
+    presetCurrent,         // The preset value of real current
+    bjtTemp;               // The measured temperature of the output BJT
+bool ldStatus,             // Load status, whether it's ON or OFF
+    opMode,                // Current operation of Power supply which is CC or CV
+    timerStatus;           // Timer status, whether it's ON or OFF
+uint32_t timerDuration;    // variable to store timer duration that user intended, if value is 0 then timer is OFF
+float mWhTotal,            // Total energy used by load in mWh
+    mAhTotal;              // Total energy used by load in mAh
+uint32_t timeRunning;      // variable to keep track total time running, recorded when ldStatus is ON and paused when ldStatus is OFF
+uint32_t logInterval;      // The interval logging value spit out on UART port
+bool logStatus;            // the status of logging, enabled or disable
+uint8_t minPWMLO1,         // Stored on EEPROM on save, minimum PWM value for logic output 1
+    maxPWMLO1,             // Stored on EEPROM on save, maximum PWM value for logic output 1
+    minPWMLO2,             // Stored on EEPROM on save, minimum PWM value for logic output 2
+    maxPWMLO2;             // Stored on EEPROM on save, maximum PWM value for logic output 2
+float maxTemp,             // Stored on EEPROM on save, maximum temperature for logic output (logic output will put out maximum PWM value if temperature is higher or equal maxTemp)
+    minTemp;               // Stored on EEPROM on save, minimum temperature for logic output (logic output will put out minimum PWM value if temperature is lower or equal to minTemp)
+float presetVoltageFactor, // Stored on EEPROM on save, preset voltage will be multiplied by this factor before shown on LCD
+    presetCurrentFactor,   // Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
+    sensedCurrentFactor,   // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+    sensedVoltageFactor;   // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
 ClickEncoder encoder(ENC_CLK, ENC_DT, ENC_BTN, ENC_STEPS);
 DigitalButton loadButton(LD_BTN);
 static Eeprom24C04_16 eeprom(EEPROM_ADDRESS);
+lcdControllerClass lcd;
 
 int16_t oldEncPos, encPos;
 uint8_t buttonState;
@@ -26,9 +52,10 @@ void setup()
   Serial.printf("Halo");
   Wire.setSDA(LCD_SDA);
   Wire.setSCL(LCD_SCL);
+  lcd.begin();
   MX_GPIO_Init();
-  pinMode(NTC1,INPUT_ANALOG);
-  pinMode(NTC2,INPUT_ANALOG);
+  pinMode(NTC1, INPUT_ANALOG);
+  pinMode(NTC2, INPUT_ANALOG);
   digitalWrite(LD_EN, HIGH);
   setupPWM();
   analogReadResolution(12);
@@ -61,7 +88,7 @@ void loop()
     miles = millis();
     int ntc1 = analogRead(NTC1_ADC_CHANNEL);
     int ntc2 = analogRead(NTC2_ADC_CHANNEL);
-    
+
     int16_t val_0 = ADS.readADC(0);
     int16_t val_1 = ADS.readADC(1);
 
