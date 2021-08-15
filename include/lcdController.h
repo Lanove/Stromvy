@@ -34,11 +34,11 @@ private:
     uint32_t refreshMillis;  // Variable to store the milis for lcd refresh
     uint32_t blinkMillis;    // Variable to store the millis for cursor blink
     LCD_SCREEN screen;       // Variable to store the lcd screen position
-    uint8_t cursor;          // Variable to store the cursor position
+    int8_t cursor;          // Variable to store the cursor position
     bool cursorBlink;        // Variable to store whether cursor should be blinked or not
     bool cursorBlinkFlag;    // Variable to store the display condition of arrow (1 == arrow displayed), used to blink the arrow of cursor
 
-    const uint8_t cursorCoordinate[LCD_SCREEN_COUNT][LCD_HIGHEST_CURSOR_COUNT][2] = { // Variable to store the coordinate of each cursor position on each screen
+    const int8_t cursorCoordinate[LCD_SCREEN_COUNT][LCD_HIGHEST_CURSOR_COUNT][2] = { // Variable to store the coordinate of each cursor position on each screen
         {                                                                             // SCREEN_MAIN
          {8, 1},
          {8, 2},
@@ -74,7 +74,7 @@ private:
          {8, 2},
          {8, 3},
          {15, 0}}};
-    const uint8_t cursorCount[LCD_SCREEN_COUNT] = {3, 7, 2, 3, 7, 7}; // Variable to store maximum cursor count of each screen
+    const int8_t cursorCount[LCD_SCREEN_COUNT] = {3, 7, 2, 3, 7, 7}; // Variable to store maximum cursor count of each screen
 
     // Variables to keep last value of x to be used on lcd refresh (only display the changed value on LCD)
     bool lastCursorBlink;
@@ -105,19 +105,19 @@ private:
         lastPresetCurrentFactor;
     float lastSensedVoltageFactor,
         lastSensedCurrentFactor;
-    void drawCursor(uint8_t position, bool display = true);
+    void drawCursor(int8_t position, bool display = true);
 
 public:
     lcdControllerClass();
     void begin();
     void service();
 
-    void setScreen(LCD_SCREEN screen);
+    void setScreen(LCD_SCREEN screen_);
     LCD_SCREEN getScreen() { return screen; }
 
     void incrementCursor();
     void decrementCursor();
-    void setCursor(uint8_t position);
+    void setCursor(int8_t position);
     int getCursor() { return cursor; }
 
     void setArrowBlink(bool blink);

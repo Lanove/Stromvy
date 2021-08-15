@@ -18,12 +18,18 @@
 
 #define EEPROM_ADDRESS 0x50
 
-#define MAX_V_ADC 4095
-#define MAX_I_ADC 4095
+#define MAX_V_DAC 5000
+#define MAX_I_DAC 5000
+#define MIN_V_DAC 0
+#define MIN_I_DAC 0
+#define MAX_TIMER_DURATION 36000000
+#define MIN_TIMER_DURATION 0
+#define MAX_LOG_INTERVAL 60000
+#define MIN_LOG_INTERVAL 200
 #define MIN_FAN_PWM 0
 #define MAX_FAN_PWM 100
 #define MIN_FAN_TEMP 0
-#define MAX_FAN_TEMP 125
+#define MAX_FAN_TEMP 99
 #define MAX_CALIBRATION_FACTOR 10.0000
 #define MIN_CALIBRATION_FACTOR 0.0001
 
@@ -69,6 +75,8 @@
 #define V_SET_TIMER_CHANNEL 4
 #endif
 
+extern int presetVoltageDAC, // Variable to store digital value (0~5000) of preset voltage
+           presetCurrentDAC; // Variable to store digital value (0~5000) of preset current
 // SCREEN_MAIN VARIABLES
 extern float sensedVoltage, // variable to store real sensed voltage on terminal, used on main and lcdController
     sensedCurrent,          // variable to store real sensed current flow to load, used on main and lcdController
@@ -89,7 +97,7 @@ extern uint32_t timeRunning; // variable to keep track total time running, recor
 extern uint32_t logInterval; // The interval logging value spit out on UART port
 extern bool logStatus;       // the status of logging, enabled or disable
 // SCREEN_FAN VARIABLES
-extern uint8_t minPWMLO1, // Stored on EEPROM on save, minimum PWM value for logic output 1
+extern int8_t minPWMLO1, // Stored on EEPROM on save, minimum PWM value for logic output 1
     maxPWMLO1,            // Stored on EEPROM on save, maximum PWM value for logic output 1
     minPWMLO2,            // Stored on EEPROM on save, minimum PWM value for logic output 2
     maxPWMLO2;            // Stored on EEPROM on save, maximum PWM value for logic output 2
