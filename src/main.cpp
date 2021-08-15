@@ -14,7 +14,7 @@ float mWhTotal,            // Total energy used by load in mWh
     mAhTotal;              // Total energy used by load in mAh
 uint32_t timeRunning;      // variable to keep track total time running, recorded when ldStatus is ON and paused when ldStatus is OFF
 uint32_t logInterval;      // The interval logging value spit out on UART port
-bool logStatus;            // the status of logging, enabled or disable
+bool logStatus;            // the status of logging, enabled or disabled
 uint8_t minPWMLO1,         // Stored on EEPROM on save, minimum PWM value for logic output 1
     maxPWMLO1,             // Stored on EEPROM on save, maximum PWM value for logic output 1
     minPWMLO2,             // Stored on EEPROM on save, minimum PWM value for logic output 2
@@ -25,10 +25,10 @@ float presetVoltageFactor, // Stored on EEPROM on save, preset voltage will be m
     presetCurrentFactor,   // Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
     sensedCurrentFactor,   // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
     sensedVoltageFactor;   // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
-ClickEncoder encoder(ENC_CLK, ENC_DT, ENC_BTN, ENC_STEPS);
 DigitalButton loadButton(LD_BTN);
 static Eeprom24C04_16 eeprom(EEPROM_ADDRESS);
 lcdControllerClass lcd;
+encoderControllerClass encoder;
 
 int16_t oldEncPos, encPos;
 uint8_t buttonState;
@@ -53,16 +53,13 @@ void setup()
   Wire.setSDA(LCD_SDA);
   Wire.setSCL(LCD_SCL);
   lcd.begin();
+  encoder.service();
   MX_GPIO_Init();
   pinMode(NTC1, INPUT_ANALOG);
   pinMode(NTC2, INPUT_ANALOG);
   digitalWrite(LD_EN, HIGH);
   setupPWM();
   analogReadResolution(12);
-  encoder.setAccelerationEnabled(true);
-
-  Serial.print("Acceleration is ");
-  Serial.println((encoder.getAccelerationEnabled()) ? "enabled" : "disabled");
 
   oldEncPos = -1;
   HAL_Delay(1000);
@@ -83,6 +80,8 @@ bool nota;
 
 void loop()
 {
+  lcd.service();
+  encoder.service();
   if (millis() - miles >= 200)
   {
     miles = millis();
@@ -110,49 +109,6 @@ void loop()
     // digitalWrite(LD_EN, nota);
     // digitalWrite(LOGIC_OUTPUT1, nota);
     // digitalWrite(LOGIC_OUTPUT2, nota);
-  }
-  encoder.service();
-  encPos += encoder.getValue();
-  bool button = digitalRead(LD_BTN);
-  if (button != lastButtonReading)
-    Serial.println(button);
-  lastButtonReading = button;
-  if (encPos != oldEncPos)
-  {
-    oldEncPos = encPos;
-    Serial.print("Encoder Value: ");
-    Serial.println(encPos);
-  }
-
-  buttonState = encoder.getButton();
-
-  if (buttonState != 0)
-  {
-    // Serial.print("Button: ");
-    // Serial.println(buttonState);
-    switch (buttonState)
-    {
-    case ClickEncoder::Open: //0
-      break;
-
-    case ClickEncoder::Closed: //1
-      break;
-
-    case ClickEncoder::Pressed: //2
-      break;
-
-    case ClickEncoder::Held: //3
-      break;
-
-    case ClickEncoder::Released: //4
-      break;
-
-    case ClickEncoder::Clicked: //5
-      break;
-
-    case ClickEncoder::DoubleClicked: //6
-      break;
-    }
   }
 }
 
