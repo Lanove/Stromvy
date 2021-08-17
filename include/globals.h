@@ -17,10 +17,16 @@
 #define STATUS_OFF 0
 
 #define EEPROM_ADDRESS 0x50
+#define ADS1115_ADDRESS 0x4A
 
-#define MAX_V_DAC 5000
-#define MAX_I_DAC 5000
-#define MIN_V_DAC 0
+#define ADC_SAMPLE_INTERVAL 50
+#define ADC_SAMPLE_COUNT 10
+#define ADC_VOLTAGE_BASE_FACTOR 4.7299732
+#define ADC_LSB_TO_CURRENT_MA 0.201560928
+
+#define MAX_V_DAC 4330
+#define MAX_I_DAC 2800
+#define MIN_V_DAC 100
 #define MIN_I_DAC 0
 #define MAX_TIMER_DURATION 36000000
 #define MIN_TIMER_DURATION 0
@@ -108,3 +114,5 @@ extern float presetVoltageFactor, // Stored on EEPROM on save, preset voltage wi
     presetCurrentFactor,          // Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
     sensedCurrentFactor,          // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
     sensedVoltageFactor;          // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+
+extern unsigned long adcMillis;

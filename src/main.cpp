@@ -1,52 +1,52 @@
 #include <globals.h>
 
-int presetVoltageDAC,       // Variable to store digital value (0~5000) of preset voltage
-    presetCurrentDAC;       // Variable to store digital value (0~5000) of preset current
-float sensedVoltage,        // variable to store real sensed voltage on terminal, used on main and lcdController
-    sensedCurrent,          // variable to store real sensed current flow to load, used on main and lcdController
-    sensedPower,            // variable to store real power dissipated by load, used on main and lcdController
-    presetVoltage,          // The preset value of real voltage
-    presetCurrent,          // The preset value of real current
-    bjtTemp;                // The measured temperature of the output BJT
-bool ldStatus,              // Load status, whether it's ON or OFF
-    opMode,                 // Current operation of Power supply which is CC or CV
-    timerStatus;            // Timer status, whether it's ON or OFF
-uint32_t timerDuration;     // variable to store timer duration that user intended, if value is 0 then timer is OFF
-float mWhTotal = 152,       // Total energy used by load in mWh
-    mAhTotal = 522;         // Total energy used by load in mAh
-uint32_t timeRunning = 666; // variable to keep track total time running, recorded when ldStatus is ON and paused when ldStatus is OFF
-uint32_t logInterval = 200; // The interval logging value spit out on UART port
-bool logStatus;             // the status of logging, enabled or disabled
-int8_t minPWMLO1,          // Stored on EEPROM on save, minimum PWM value for logic output 1
-    maxPWMLO1,              // Stored on EEPROM on save, maximum PWM value for logic output 1
-    minPWMLO2,              // Stored on EEPROM on save, minimum PWM value for logic output 2
-    maxPWMLO2;              // Stored on EEPROM on save, maximum PWM value for logic output 2
-float maxTemp,              // Stored on EEPROM on save, maximum temperature for logic output (logic output will put out maximum PWM value if temperature is higher or equal maxTemp)
-    minTemp;                // Stored on EEPROM on save, minimum temperature for logic output (logic output will put out minimum PWM value if temperature is lower or equal to minTemp)
-float presetVoltageFactor,  // Stored on EEPROM on save, preset voltage will be multiplied by this factor before shown on LCD
-    presetCurrentFactor,    // Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
-    sensedCurrentFactor,    // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
-    sensedVoltageFactor;    // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+int presetVoltageDAC = 4330,     // Variable to store digital value (0~5000) of preset voltage
+    presetCurrentDAC = 5000;     // Variable to store digital value (0~5000) of preset current
+float sensedVoltage,             // variable to store real sensed voltage on terminal, used on main and lcdController
+    sensedCurrent,               // variable to store real sensed current flow to load, used on main and lcdController
+    sensedPower,                 // variable to store real power dissipated by load, used on main and lcdController
+    presetVoltage,               // The preset value of real voltage
+    presetCurrent,               // The preset value of real current
+    bjtTemp;                     // The measured temperature of the output BJT
+bool ldStatus,                   // Load status, whether it's ON or OFF
+    opMode,                      // Current operation of Power supply which is CC or CV
+    timerStatus;                 // Timer status, whether it's ON or OFF
+uint32_t timerDuration;          // variable to store timer duration that user intended, if value is 0 then timer is OFF
+float mWhTotal = 152,            // Total energy used by load in mWh
+    mAhTotal = 522;              // Total energy used by load in mAh
+uint32_t timeRunning = 666;      // variable to keep track total time running, recorded when ldStatus is ON and paused when ldStatus is OFF
+uint32_t logInterval = 200;      // The interval logging value spit out on UART port
+bool logStatus;                  // the status of logging, enabled or disabled
+int8_t minPWMLO1,                // Stored on EEPROM on save, minimum PWM value for logic output 1
+    maxPWMLO1,                   // Stored on EEPROM on save, maximum PWM value for logic output 1
+    minPWMLO2,                   // Stored on EEPROM on save, minimum PWM value for logic output 2
+    maxPWMLO2;                   // Stored on EEPROM on save, maximum PWM value for logic output 2
+float maxTemp,                   // Stored on EEPROM on save, maximum temperature for logic output (logic output will put out maximum PWM value if temperature is higher or equal maxTemp)
+    minTemp;                     // Stored on EEPROM on save, minimum temperature for logic output (logic output will put out minimum PWM value if temperature is lower or equal to minTemp)
+float presetVoltageFactor = 1.0, // Stored on EEPROM on save, preset voltage will be multiplied by this factor before shown on LCD
+    presetCurrentFactor = 1.0,   // Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
+    sensedCurrentFactor = 1.0,   // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+    sensedVoltageFactor = 1.0;   // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+
 DigitalButton loadButton(LD_BTN);
 static Eeprom24C04_16 eeprom(EEPROM_ADDRESS);
+
 lcdControllerClass lcd;
 encoderControllerClass encoder;
 
-int16_t oldEncPos, encPos;
-uint8_t buttonState;
-
 HardwareTimer *pwmTimer = new HardwareTimer(TIM4);
 HardwareTimer *fanTimer = new HardwareTimer(TIM3);
-ADS1115 ADS(0x4A);
-RunningAverage voltageAverage(10);
-RunningAverage currentAverage(10);
 
-bool polarity;
-unsigned long recorder, period, counter;
+ADS1115 ADS(ADS1115_ADDRESS);
+RunningAverage raVoltage(ADC_SAMPLE_COUNT);
+RunningAverage raCurrent(ADC_SAMPLE_COUNT);
+
+const float adcLSBSize = ADS.toVoltage(1);
 
 void setupPWM();
-void testCallback();
 static void MX_GPIO_Init(void);
+
+unsigned long adcMillis;
 
 void setup()
 {
@@ -63,10 +63,6 @@ void setup()
 
   lcd.begin();
   encoder.begin();
-  oldEncPos = -1;
-  HAL_Delay(1000);
-  while (!Serial)
-    ;
   if (!ADS.begin())
   {
     Serial.println("Failed to initialize ADS.");
@@ -76,41 +72,28 @@ void setup()
   ADS.setGain(1);
 }
 
-bool lastButtonReading;
-unsigned long milliser, miles;
-bool nota;
-
 void loop()
 {
   lcd.service();
   encoder.service();
-  if (millis() - miles >= 200)
+  if (millis() - adcMillis >= ADC_SAMPLE_INTERVAL)
   {
-    miles = millis();
-    int ntc1 = analogRead(NTC1_ADC_CHANNEL);
-    int ntc2 = analogRead(NTC2_ADC_CHANNEL);
-
+    adcMillis = millis();
     int16_t val_0 = ADS.readADC(0);
-    int16_t val_1 = ADS.readADC(1);
-
-    voltageAverage.addValue(val_0);
-    currentAverage.addValue(val_1);
-    float f = ADS.toVoltage(1); // voltage factor
-    // Serial.printf("V_int:%f ; I_int:%f\n", float(vread)*0.0008056640625, float(iread)*0.0008056640625);
-  }
-  if (millis() - milliser >= 5000)
-  {
-    milliser = millis();
-    nota = !nota;
-
-    // digitalWrite(LED_PC13, nota);
-    // digitalWrite(LED_LDON, nota);
-    // digitalWrite(LED_ST1, nota);
-    // digitalWrite(LED_ST2, nota);
-    // // digitalWrite(BUZZER, nota);
-    // digitalWrite(LD_EN, nota);
-    // digitalWrite(LOGIC_OUTPUT1, nota);
-    // digitalWrite(LOGIC_OUTPUT2, nota);
+    int16_t val_1 = ADS.readADC(1) + 84;
+    raVoltage.addValue(val_0);
+    raCurrent.addValue(val_1);
+    sensedVoltage = raVoltage.getAverage() * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor;
+    sensedCurrent = raCurrent.getAverage() * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor;
+    if (sensedVoltage < 0)
+      sensedVoltage = 0;
+    if (sensedCurrent < 0)
+      sensedCurrent = 0;
+    pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, uint32_t(float(presetCurrentDAC)));
+    pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, uint32_t(float(presetVoltageDAC)));
+    presetVoltage = 0.004619 * presetVoltageDAC * presetVoltageFactor;
+    presetCurrent = 1.095 * presetCurrentDAC * presetCurrentFactor;
+    Serial.printf("I_DAC : %d ; V_DAC : %d\n", presetCurrentDAC,presetVoltageDAC);
   }
 }
 
@@ -129,8 +112,8 @@ void setupPWM()
 
   fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, 70, PERCENT_COMPARE_FORMAT); // 50%
 
-  pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, 5000); // 100%
-  pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, 2500); // 50%
+  pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, 0);
+  pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, 0);
 
   pwmTimer->resume();
   fanTimer->resume();

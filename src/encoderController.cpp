@@ -81,7 +81,7 @@ void encoderControllerClass::service()
         }
         else if (screen == SCREEN_MENU && cursor == 2)
             timerDuration = timerDuration + encoderDelta;
-        else if(screen == SCREEN_LOG && cursor == 1)
+        else if (screen == SCREEN_LOG && cursor == 1)
             logInterval = logInterval + encoderDelta;
         else if (screen == SCREEN_FAN)
         {
@@ -113,61 +113,63 @@ void encoderControllerClass::service()
             else if (cursor == 5)
                 presetCurrentFactor = presetCurrentFactor + (float(encoderDelta) * 0.0001);
         }
-        if (presetVoltageDAC < MIN_V_DAC)
-            presetVoltageDAC = MIN_V_DAC;
-        else if (presetVoltageDAC > MAX_V_DAC)
-            presetVoltageDAC = MAX_V_DAC;
-        if (presetCurrentDAC < MIN_I_DAC)
-            presetCurrentDAC = MIN_I_DAC;
-        else if (presetCurrentDAC > MAX_I_DAC)
-            presetCurrentDAC = MAX_I_DAC;
-        if(timerDuration > MAX_TIMER_DURATION)
-            timerDuration = MIN_TIMER_DURATION;
-        if(logInterval < MIN_LOG_INTERVAL)
-            logInterval = MIN_LOG_INTERVAL;
-        else if(logInterval > MAX_LOG_INTERVAL)
-            logInterval = MAX_LOG_INTERVAL;
-        if(minPWMLO1 < MIN_FAN_PWM - 1)
-            minPWMLO1 = MIN_FAN_PWM - 1;
-        else if(minPWMLO1 > MAX_FAN_PWM)
-            minPWMLO1 = MAX_FAN_PWM;
-        if(minPWMLO2 < MIN_FAN_PWM - 1)
-            minPWMLO2 = MIN_FAN_PWM - 1;
-        else if(minPWMLO2 > MAX_FAN_PWM)
-            minPWMLO2 = MAX_FAN_PWM;
-        if(maxPWMLO1 < MIN_FAN_PWM)
-            maxPWMLO1 = MIN_FAN_PWM;
-        else if(maxPWMLO1 > MAX_FAN_PWM)
-            maxPWMLO1 = MAX_FAN_PWM;
-        if(maxPWMLO2 < MIN_FAN_PWM)
-            maxPWMLO2 = MIN_FAN_PWM;
-        else if(maxPWMLO2 > MAX_FAN_PWM)
-            maxPWMLO2 = MAX_FAN_PWM;
-        if(minTemp < MIN_FAN_TEMP)
-            minTemp = MIN_FAN_TEMP;
-        else if(minTemp > MAX_FAN_TEMP)
-            minTemp = MAX_FAN_TEMP;
-        if(maxTemp < MIN_FAN_TEMP)
-            maxTemp = MIN_FAN_TEMP;
-        else if(maxTemp > MAX_FAN_TEMP)
-            maxTemp = MAX_FAN_TEMP;
-        if(presetVoltageFactor < MIN_CALIBRATION_FACTOR)
-            presetVoltageFactor = MIN_CALIBRATION_FACTOR;
-        else if(presetVoltageFactor > MAX_CALIBRATION_FACTOR)
-            presetVoltageFactor = MAX_CALIBRATION_FACTOR;
-        if(presetCurrentFactor < MIN_CALIBRATION_FACTOR)
-            presetCurrentFactor = MIN_CALIBRATION_FACTOR;
-        else if(presetCurrentFactor > MAX_CALIBRATION_FACTOR)
-            presetCurrentFactor = MAX_CALIBRATION_FACTOR;
-        if(sensedVoltageFactor < MIN_CALIBRATION_FACTOR)
-            sensedVoltageFactor = MIN_CALIBRATION_FACTOR;
-        else if(sensedVoltageFactor > MAX_CALIBRATION_FACTOR)
-            sensedVoltageFactor = MAX_CALIBRATION_FACTOR;
-        if(sensedCurrentFactor < MIN_CALIBRATION_FACTOR)
-            sensedCurrentFactor = MIN_CALIBRATION_FACTOR;
-        else if(sensedCurrentFactor > MAX_CALIBRATION_FACTOR)
-            sensedCurrentFactor = MAX_CALIBRATION_FACTOR;
     }
+
+    if (presetVoltageDAC < MIN_V_DAC)
+        presetVoltageDAC = MIN_V_DAC;
+    else if (presetVoltageDAC > MAX_V_DAC)
+        presetVoltageDAC = MAX_V_DAC;
+    if (presetCurrentDAC < MIN_I_DAC)
+        presetCurrentDAC = MIN_I_DAC;
+    else if (presetCurrentDAC > MAX_I_DAC)
+        presetCurrentDAC = MAX_I_DAC;
+    if (timerDuration > MAX_TIMER_DURATION)
+        timerDuration = MIN_TIMER_DURATION;
+    if (logInterval < MIN_LOG_INTERVAL)
+        logInterval = MIN_LOG_INTERVAL;
+    else if (logInterval > MAX_LOG_INTERVAL)
+        logInterval = MAX_LOG_INTERVAL;
+    if (minPWMLO1 < MIN_FAN_PWM - 1)
+        minPWMLO1 = MIN_FAN_PWM - 1;
+    else if (minPWMLO1 > MAX_FAN_PWM)
+        minPWMLO1 = MAX_FAN_PWM;
+    if (minPWMLO2 < MIN_FAN_PWM - 1)
+        minPWMLO2 = MIN_FAN_PWM - 1;
+    else if (minPWMLO2 > MAX_FAN_PWM)
+        minPWMLO2 = MAX_FAN_PWM;
+    if (maxPWMLO1 < MIN_FAN_PWM)
+        maxPWMLO1 = MIN_FAN_PWM;
+    else if (maxPWMLO1 > MAX_FAN_PWM)
+        maxPWMLO1 = MAX_FAN_PWM;
+    if (maxPWMLO2 < MIN_FAN_PWM)
+        maxPWMLO2 = MIN_FAN_PWM;
+    else if (maxPWMLO2 > MAX_FAN_PWM)
+        maxPWMLO2 = MAX_FAN_PWM;
+    if (minTemp < MIN_FAN_TEMP)
+        minTemp = MIN_FAN_TEMP;
+    else if (minTemp > MAX_FAN_TEMP)
+        minTemp = MAX_FAN_TEMP;
+    if (maxTemp < MIN_FAN_TEMP)
+        maxTemp = MIN_FAN_TEMP;
+    else if (maxTemp > MAX_FAN_TEMP)
+        maxTemp = MAX_FAN_TEMP;
+    if (presetVoltageFactor < MIN_CALIBRATION_FACTOR)
+        presetVoltageFactor = MIN_CALIBRATION_FACTOR;
+    else if (presetVoltageFactor > MAX_CALIBRATION_FACTOR)
+        presetVoltageFactor = MAX_CALIBRATION_FACTOR;
+    if (presetCurrentFactor < MIN_CALIBRATION_FACTOR)
+        presetCurrentFactor = MIN_CALIBRATION_FACTOR;
+    else if (presetCurrentFactor > MAX_CALIBRATION_FACTOR)
+        presetCurrentFactor = MAX_CALIBRATION_FACTOR;
+    if (sensedVoltageFactor < MIN_CALIBRATION_FACTOR)
+        sensedVoltageFactor = MIN_CALIBRATION_FACTOR;
+    else if (sensedVoltageFactor > MAX_CALIBRATION_FACTOR)
+        sensedVoltageFactor = MAX_CALIBRATION_FACTOR;
+    if (sensedCurrentFactor < MIN_CALIBRATION_FACTOR)
+        sensedCurrentFactor = MIN_CALIBRATION_FACTOR;
+    else if (sensedCurrentFactor > MAX_CALIBRATION_FACTOR)
+        sensedCurrentFactor = MAX_CALIBRATION_FACTOR;
+
     oldEncoderValue = encoderValue;
 }
 
