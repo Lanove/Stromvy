@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <encoderController.h>
 #include <lcdController.h>
+#include <eepromController.h>
 #include <Wire.h>
 #include <ClickEncoder.h>
 #include <Eeprom24C04_16.h>
@@ -16,7 +17,6 @@
 #define STATUS_ON 1
 #define STATUS_OFF 0
 
-#define EEPROM_ADDRESS 0x50
 #define ADS1115_ADDRESS 0x4A
 
 #define ADC_SAMPLE_INTERVAL 50
@@ -82,7 +82,7 @@
 #endif
 
 extern int presetVoltageDAC, // Variable to store digital value (0~5000) of preset voltage
-           presetCurrentDAC; // Variable to store digital value (0~5000) of preset current
+    presetCurrentDAC;        // Variable to store digital value (0~5000) of preset current
 // SCREEN_MAIN VARIABLES
 extern float sensedVoltage, // variable to store real sensed voltage on terminal, used on main and lcdController
     sensedCurrent,          // variable to store real sensed current flow to load, used on main and lcdController
@@ -103,16 +103,16 @@ extern uint32_t timeRunning; // variable to keep track total time running, recor
 extern uint32_t logInterval; // The interval logging value spit out on UART port
 extern bool logStatus;       // the status of logging, enabled or disable
 // SCREEN_FAN VARIABLES
-extern int8_t minPWMLO1, // Stored on EEPROM on save, minimum PWM value for logic output 1
-    maxPWMLO1,            // Stored on EEPROM on save, maximum PWM value for logic output 1
-    minPWMLO2,            // Stored on EEPROM on save, minimum PWM value for logic output 2
-    maxPWMLO2;            // Stored on EEPROM on save, maximum PWM value for logic output 2
-extern float maxTemp,     // Stored on EEPROM on save, maximum temperature for logic output (logic output will put out maximum PWM value if temperature is higher or equal maxTemp)
-    minTemp;              // Stored on EEPROM on save, minimum temperature for logic output (logic output will put out minimum PWM value if temperature is lower or equal to minTemp)
+extern int8_t minPWMLO1, // EEPROM address 0. Stored on EEPROM on save, minimum PWM value for logic output 1
+    maxPWMLO1,           // EEPROM address 1. Stored on EEPROM on save, maximum PWM value for logic output 1
+    minPWMLO2,           // EEPROM address 2. Stored on EEPROM on save, minimum PWM value for logic output 2
+    maxPWMLO2;           // EEPROM address 3. Stored on EEPROM on save, maximum PWM value for logic output 2
+extern float maxTemp,    // EEPROM address 4. Stored on EEPROM on save, maximum temperature for logic output (logic output will put out maximum PWM value if temperature is higher or equal maxTemp)
+    minTemp;             // EEPROM address 8. Stored on EEPROM on save, minimum temperature for logic output (logic output will put out minimum PWM value if temperature is lower or equal to minTemp)
 // SCREEN_CAL VARIABLES
-extern float presetVoltageFactor, // Stored on EEPROM on save, preset voltage will be multiplied by this factor before shown on LCD
-    presetCurrentFactor,          // Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
-    sensedCurrentFactor,          // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
-    sensedVoltageFactor;          // Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+extern float presetVoltageFactor, // EEPROM address 12. Stored on EEPROM on save, preset voltage will be multiplied by this factor before shown on LCD
+    presetCurrentFactor,          // EEPROM address 16. Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
+    sensedCurrentFactor,          // EEPROM address 20. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+    sensedVoltageFactor;          // EEPROM address 24. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
 
 extern unsigned long adcMillis;

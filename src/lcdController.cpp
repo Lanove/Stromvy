@@ -170,6 +170,16 @@ void lcdControllerClass::service()
                 clcd->setCursor(9, 1);
                 clcd->printf("%04.0fmA", presetCurrent);
             }
+            if (sensedVoltage != lastSensedVoltage)
+            {
+                clcd->setCursor(0, 0);
+                clcd->printf("%05.2fV", sensedVoltage);
+            }
+            if (sensedCurrent != lastSensedCurrent)
+            {
+                clcd->setCursor(0, 1);
+                clcd->printf("%04.0fmA",sensedCurrent);
+            }
         }
 
         lastCursorBlink = cursorBlink;

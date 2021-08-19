@@ -55,7 +55,11 @@ void encoderControllerClass::service()
             (screen == SCREEN_LOG && cursor == 1) ||
             (screen == SCREEN_FAN && cursor != 6) ||
             (screen == SCREEN_CAL && cursor != 6))
+        {
             lcd.setArrowBlink(!blinkFlag);
+            if (!blinkFlag)
+                eeprom.update();
+        }
         else if (screen == SCREEN_MENU && cursor == 6)
             NVIC_SystemReset();
         else if (screen == SCREEN_ENERGY && cursor == 0)
