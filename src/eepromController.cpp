@@ -29,11 +29,11 @@ void eepromControllerClass::fetch()
     lastPresetCurrentFactor = presetCurrentFactor;
     lastSensedCurrentFactor = sensedVoltageFactor;
     lastSensedVoltageFactor = sensedVoltageFactor;
-    Serial.println("readBytes;");
 }
 
 void eepromControllerClass::update()
 {
+    // Only write to EEPROM when one or more variable below is changed
     if (lastMinPWMLO1 != minPWMLO1 ||
         lastMaxPWMLO1 != maxPWMLO1 ||
         lastMinPWMLO2 != minPWMLO2 ||
@@ -42,7 +42,7 @@ void eepromControllerClass::update()
         lastMinTemp != minTemp ||
         lastPresetVoltageFactor != presetVoltageFactor ||
         lastPresetCurrentFactor != presetCurrentFactor ||
-        lastSensedCurrentFactor != sensedVoltageFactor ||
+        lastSensedCurrentFactor != sensedCurrentFactor ||
         lastSensedVoltageFactor != sensedVoltageFactor)
     {
         memcpy(&outputBuffer[0], &minPWMLO1, sizeof(int8_t));
@@ -56,7 +56,6 @@ void eepromControllerClass::update()
         memcpy(&outputBuffer[20], &sensedVoltageFactor, sizeof(float));
         memcpy(&outputBuffer[24], &sensedCurrentFactor, sizeof(float));
         eep->writeBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer);
-        Serial.println("writeBytes;");
         fetch();
     }
 }
