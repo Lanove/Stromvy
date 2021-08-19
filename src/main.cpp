@@ -49,7 +49,7 @@ void timer4Interrupt(void);
 void fanHandler();
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 
-unsigned long adcMillis, dacMillis, lastMillis;
+unsigned long adcMillis, dacMillis, logMillis, lastMillis;
 unsigned long dacVoltage, dacCurrent;
 
 void setup()
@@ -78,7 +78,7 @@ void setup()
 
 void loop()
 {
-  // timeRunning += millis() - timeRunningMillis;
+  opMode = digitalRead(CC_IND);
   lcd.service();
   encoder.service();
   ClickEncoder::Button b = loadButton.getButton();
@@ -89,14 +89,19 @@ void loop()
     dacVoltage = 0;
     dacCurrent = 0;
   }
-  if (bjtTemp > OVERHEAT_TEMPERATURE)
+  if (bjtTemp > OVERHEAT_TEMPERATURE || (timeRunning/1000 >= timerDuration && timerDuration != 0))
   {
     ldStatus = STATUS_OFF;
     digitalWrite(LD_EN, ldStatus);
     dacVoltage = 0;
     dacCurrent = 0;
   }
-  opMode = digitalRead(CC_IND);
+  if (millis() - logMillis >= logInterval && logStatus)
+  {
+    logMillis = millis();
+    // sensedVoltage,sensedCurrent,sensedPower,presetVoltage,presetCurrent,bjtTemp,mWhTotal,mAhTotal,timeRunning (hh:mm:ss)
+    Serial.printf("%5.2f;%4.0f;%5.3f;%5.2f;%4.0f;%1.1f;%1.0f;%1.0f;%02d:%02d:%02d\n", sensedVoltage, sensedCurrent, sensedPower, presetVoltage, presetCurrent, bjtTemp, mWhTotal, mAhTotal, (int)timeRunning / 3600000, (int)(timeRunning / 1000) % 3600 / 60, (int)(timeRunning / 1000) % 60);
+  }
   if (millis() - dacMillis >= DAC_UPDATE_INTERVAL)
   {
     dacMillis = millis();
