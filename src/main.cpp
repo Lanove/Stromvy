@@ -45,20 +45,19 @@ const float adcLSBSize = ADS.toVoltage(1);
 
 void setupPWM();
 static void MX_GPIO_Init(void);
-void encoderService(void);
+void timer4Interrupt(void);
 
-unsigned long adcMillis;
+unsigned long adcMillis, dacMillis;
+unsigned long dacVoltage, dacCurrent;
 
 void setup()
 {
   Serial.begin(115200);
-  Serial.printf("Halo");
   Wire.setSDA(LCD_SDA);
   Wire.setSCL(LCD_SCL);
   MX_GPIO_Init();
   pinMode(NTC1, INPUT_ANALOG);
   pinMode(NTC2, INPUT_ANALOG);
-  digitalWrite(LD_EN, HIGH);
   analogReadResolution(12);
 
   lcd.begin();
@@ -79,6 +78,21 @@ void loop()
 {
   lcd.service();
   encoder.service();
+  ClickEncoder::Button b = loadButton.getButton();
+  if (b == ClickEncoder::Clicked)
+  {
+    ldStatus = !ldStatus;
+    digitalWrite(LD_EN, ldStatus);
+    dacVoltage = 0;
+    dacCurrent = 0;
+  }
+  opMode = digitalRead(CC_IND);
+  if (millis() - dacMillis >= DAC_UPDATE_INTERVAL)
+  {
+    dacMillis = millis();
+    pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, (ldStatus == STATUS_ON) ? uint32_t(float(dacCurrent)) : 0);
+    pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, (ldStatus == STATUS_ON) ? uint32_t(float(dacVoltage)) : 0);
+  }
   if (millis() - adcMillis >= ADC_SAMPLE_INTERVAL)
   {
     adcMillis = millis();
@@ -93,28 +107,40 @@ void loop()
       sensedVoltage = 0;
     if (sensedCurrent < 0)
       sensedCurrent = 0;
-    pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, uint32_t(float(presetCurrentDAC)));
-    pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, uint32_t(float(presetVoltageDAC)));
 
     const float R2 = 10000 * (4095.0 / (float)ntc1 - 1.0);
     const float logR2 = log(R2);
     bjtTemp = (1.0 / (1.009249522e-03 + 2.378405444e-04 * logR2 + 2.019202697e-07 * logR2 * logR2 * logR2));
     bjtTemp = bjtTemp - 273.15;
 
-    presetVoltage = 0.004619 * presetVoltageDAC * presetVoltageFactor;
-    presetCurrent = 1.095 * presetCurrentDAC * presetCurrentFactor;
+    presetVoltage = DAC_VOLTAGE_BASE_FACTOR * presetVoltageDAC * presetVoltageFactor;
+    presetCurrent = (DAC_CURRENT_BASE_FACTOR * presetCurrentDAC * presetCurrentFactor) + DAC_CURRENT_OFFSET;
     // Serial.printf("I_DAC : %d ; V_DAC : %d\n", presetCurrentDAC,presetVoltageDAC);
   }
 }
 
 uint8_t encoderPrescaler = 0;
-void encoderService(void)
+uint8_t dacPrescaler = 0;
+void timer4Interrupt(void)
 {
   encoderPrescaler++;
+  dacPrescaler++;
+  if (dacPrescaler >= 2)
+  {
+    if (dacVoltage < presetVoltageDAC)
+      dacVoltage++;
+    else if (dacVoltage > presetVoltageDAC)
+      dacVoltage--;
+    if (dacCurrent < presetCurrentDAC)
+      dacCurrent++;
+    else if (dacCurrent > presetCurrentDAC)
+      dacCurrent--;
+  }
   if (encoderPrescaler >= 5)
   {
     encoderPrescaler = 0;
     encoder.enc->service();
+    loadButton.service();
   }
 }
 
@@ -128,7 +154,7 @@ void setupPWM()
   // Pwm frequency is calculated with by dividing PWM Clock (72MHz) with ARR/overflow tick
   // set PWM frequency to 14.4kHz (72MHz/5000=14.4KHz)
   pwmTimer->setOverflow(5000); // in TICK FORMAT
-  pwmTimer->attachInterrupt(encoderService);
+  pwmTimer->attachInterrupt(timer4Interrupt);
   // set fan PWM frequency to 100Hz
   fanTimer->setOverflow(100, HERTZ_FORMAT); // in Hertz
 

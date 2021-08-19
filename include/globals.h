@@ -19,6 +19,11 @@
 
 #define ADS1115_ADDRESS 0x4A
 
+#define DAC_UPDATE_INTERVAL 10
+#define DAC_VOLTAGE_BASE_FACTOR 0.004619
+#define DAC_CURRENT_BASE_FACTOR 1.095
+#define DAC_CURRENT_OFFSET 19 // in mA
+
 #define ADC_SAMPLE_INTERVAL 50
 #define ADC_SAMPLE_COUNT 10
 #define ADC_VOLTAGE_BASE_FACTOR 4.7299732
@@ -43,7 +48,7 @@
 
 #define LED_LDON PB7
 #define LED_ST2 PB6
-#define LED_ST1 PB5 //problem
+#define LED_ST1 PB5
 #define LED_PC13 PC13
 
 #define ENC_CLK PB4
@@ -67,9 +72,6 @@
 
 #define NTC1 PA2
 #define NTC2 PA3
-
-#define NTC1_ADC_CHANNEL ADC_CHANNEL_2
-#define NTC2_ADC_CHANNEL ADC_CHANNEL_3
 
 #define CC_IND PB12
 #define CV_IND PB13

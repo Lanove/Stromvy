@@ -226,11 +226,11 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
     if (screen == SCREEN_MAIN)
     {
         clcd->setCursor(0, 0);
-        clcd->printf("Preset %c Actual%c%s", BLOCK_SYMBOL, BLOCK_SYMBOL, (ldStatus == STATUS_ON) ? "ON" : "OFF");
+        clcd->printf("ACTUAL %c PRESET%c%s", BLOCK_SYMBOL, BLOCK_SYMBOL, (ldStatus == STATUS_ON) ? "ON" : "OFF");
         clcd->setCursor(0, 1);
-        clcd->printf("%05.2fV %c %05.2fV%c%s", presetVoltage, BLOCK_SYMBOL, sensedVoltage, BLOCK_SYMBOL, (opMode == MODE_CC) ? "CC" : "CV");
+        clcd->printf("%05.2fV %c %05.2fV%c%s", sensedVoltage, BLOCK_SYMBOL, presetVoltage, BLOCK_SYMBOL, (opMode == MODE_CC) ? "CC" : "CV");
         clcd->setCursor(0, 2);
-        clcd->printf("%04.0fmA %c %04.0fmA%c%2.0f%cC", presetCurrent, BLOCK_SYMBOL, sensedCurrent, BLOCK_SYMBOL, bjtTemp, DEGREE_SYMBOL);
+        clcd->printf("%04.0fmA %c %04.0fmA%c%2.0f%cC", sensedCurrent, BLOCK_SYMBOL, presetCurrent, BLOCK_SYMBOL, bjtTemp, DEGREE_SYMBOL);
         clcd->setCursor(0, 3);
         if (sensedPower >= 10.00)
             clcd->printf("%05.2fW %c MENU  %c%s", sensedPower, BLOCK_SYMBOL, BLOCK_SYMBOL, (timerDuration == 0) ? "Toff" : "Ton");
