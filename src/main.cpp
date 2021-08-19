@@ -48,7 +48,8 @@ static void MX_GPIO_Init(void);
 void timer4Interrupt(void);
 void fanHandler();
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
-unsigned long adcMillis, dacMillis;
+
+unsigned long adcMillis, dacMillis, lastMillis;
 unsigned long dacVoltage, dacCurrent;
 
 void setup()
@@ -77,6 +78,7 @@ void setup()
 
 void loop()
 {
+  // timeRunning += millis() - timeRunningMillis;
   lcd.service();
   encoder.service();
   ClickEncoder::Button b = loadButton.getButton();
@@ -112,12 +114,17 @@ void loop()
     raCurrent.addValue(val_1);
     sensedVoltage = raVoltage.getAverage() * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor;
     sensedCurrent = raCurrent.getAverage() * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor;
-    sensedPower = sensedVoltage * (sensedCurrent/1000);
+    sensedPower = sensedVoltage * (sensedCurrent / 1000);
     if (sensedVoltage < 0)
       sensedVoltage = 0;
     if (sensedCurrent < 0)
       sensedCurrent = 0;
-
+    if (sensedPower < 0)
+      sensedPower = 0.000000001;
+    if (mAhTotal < 0)
+      mAhTotal = 0;
+    if (mWhTotal < 0)
+      mWhTotal = 0;
     const float R2 = 10000 * (4095.0 / (float)ntc1 - 1.0);
     const float logR2 = log(R2);
     bjtTemp = (1.0 / (1.009249522e-03 + 2.378405444e-04 * logR2 + 2.019202697e-07 * logR2 * logR2 * logR2));
@@ -125,7 +132,16 @@ void loop()
 
     presetVoltage = DAC_VOLTAGE_BASE_FACTOR * presetVoltageDAC * presetVoltageFactor;
     presetCurrent = (DAC_CURRENT_BASE_FACTOR * presetCurrentDAC * presetCurrentFactor) + DAC_CURRENT_OFFSET;
-    // Serial.printf("I_DAC : %d ; V_DAC : %d\n", presetCurrentDAC,presetVoltageDAC);
+
+    unsigned long cMillis = millis();
+    float elapsedTime = (cMillis - lastMillis) / 1000.0; // in normal second not millisecond
+    if (ldStatus == STATUS_ON)
+    {
+      mAhTotal += (sensedCurrent * elapsedTime) / 3600;
+      mWhTotal += (sensedPower * 1000.0 * elapsedTime) / 3600;
+      timeRunning += uint32_t(elapsedTime * 1000.0);
+    }
+    lastMillis = cMillis;
   }
 }
 
@@ -141,7 +157,6 @@ void fanHandler()
     pwmLO2 = 100;
   fanTimer->setCaptureCompare(LOGIC_OUTPUT1_TIMER_CHANNEL, pwmLO1, PERCENT_COMPARE_FORMAT);
   fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, pwmLO2, PERCENT_COMPARE_FORMAT);
-  Serial.printf("Fan1:%d%% ; Fan2:%d%%\n", pwmLO1, pwmLO2);
 }
 
 uint8_t encoderPrescaler = 0;

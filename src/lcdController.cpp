@@ -95,7 +95,7 @@ void lcdControllerClass::service()
             if (timeRunning != lastTimeRunning)
             {
                 clcd->setCursor(12, 0);
-                clcd->printf("%02d:%02d:%02d", (int)timeRunning / 3600, (int)timeRunning % 3600 / 60, (int)timeRunning % 60);
+                clcd->printf("%02d:%02d:%02d", (int)timeRunning / 3600000, (int)(timeRunning/1000) % 3600 / 60, (int)(timeRunning/1000) % 60);
             }
         }
         else if (screen == SCREEN_LOG)
@@ -254,7 +254,7 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
     else if (screen == SCREEN_ENERGY)
     {
         clcd->setCursor(0, 0);
-        clcd->printf("%8.0fmWh %02d:%02d:%02d", mWhTotal, (int)timeRunning / 3600, (int)timeRunning % 3600 / 60, (int)timeRunning % 60);
+        clcd->printf("%8.0fmWh %02d:%02d:%02d", mWhTotal, (int)timeRunning / 3600000, (int)(timeRunning/1000) % 3600 / 60, (int)(timeRunning/1000) % 60);
         clcd->setCursor(0, 1);
         clcd->printf("%8.0fmAh", mAhTotal);
         clcd->setCursor(0, 2);
