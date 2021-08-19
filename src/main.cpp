@@ -46,7 +46,8 @@ const float adcLSBSize = ADS.toVoltage(1);
 void setupPWM();
 static void MX_GPIO_Init(void);
 void timer4Interrupt(void);
-
+void fanHandler();
+float mapf(float x, float in_min, float in_max, float out_min, float out_max);
 unsigned long adcMillis, dacMillis;
 unsigned long dacVoltage, dacCurrent;
 
@@ -86,6 +87,13 @@ void loop()
     dacVoltage = 0;
     dacCurrent = 0;
   }
+  if (bjtTemp > OVERHEAT_TEMPERATURE)
+  {
+    ldStatus = STATUS_OFF;
+    digitalWrite(LD_EN, ldStatus);
+    dacVoltage = 0;
+    dacCurrent = 0;
+  }
   opMode = digitalRead(CC_IND);
   if (millis() - dacMillis >= DAC_UPDATE_INTERVAL)
   {
@@ -95,6 +103,7 @@ void loop()
   }
   if (millis() - adcMillis >= ADC_SAMPLE_INTERVAL)
   {
+    fanHandler();
     adcMillis = millis();
     int16_t val_0 = ADS.readADC(0);
     int16_t val_1 = ADS.readADC(1) + 84;
@@ -103,6 +112,7 @@ void loop()
     raCurrent.addValue(val_1);
     sensedVoltage = raVoltage.getAverage() * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor;
     sensedCurrent = raCurrent.getAverage() * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor;
+    sensedPower = sensedVoltage * (sensedCurrent/1000);
     if (sensedVoltage < 0)
       sensedVoltage = 0;
     if (sensedCurrent < 0)
@@ -117,6 +127,21 @@ void loop()
     presetCurrent = (DAC_CURRENT_BASE_FACTOR * presetCurrentDAC * presetCurrentFactor) + DAC_CURRENT_OFFSET;
     // Serial.printf("I_DAC : %d ; V_DAC : %d\n", presetCurrentDAC,presetVoltageDAC);
   }
+}
+
+void fanHandler()
+{
+  unsigned long pwmLO1 = (unsigned long)mapf(bjtTemp, minTemp, maxTemp, float(minPWMLO1), float(maxPWMLO1)),
+                pwmLO2 = (unsigned long)mapf(sensedCurrent, LO2_MIN_CURRENT, LO2_MAX_CURRENT, float(minPWMLO2), float(maxPWMLO2));
+  if (bjtTemp < minTemp)
+    pwmLO1 = 0;
+  if (pwmLO1 > 100)
+    pwmLO1 = 100;
+  if (pwmLO2 > 100)
+    pwmLO2 = 100;
+  fanTimer->setCaptureCompare(LOGIC_OUTPUT1_TIMER_CHANNEL, pwmLO1, PERCENT_COMPARE_FORMAT);
+  fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, pwmLO2, PERCENT_COMPARE_FORMAT);
+  Serial.printf("Fan1:%d%% ; Fan2:%d%%\n", pwmLO1, pwmLO2);
 }
 
 uint8_t encoderPrescaler = 0;
@@ -157,8 +182,6 @@ void setupPWM()
   pwmTimer->attachInterrupt(timer4Interrupt);
   // set fan PWM frequency to 100Hz
   fanTimer->setOverflow(100, HERTZ_FORMAT); // in Hertz
-
-  fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, 70, PERCENT_COMPARE_FORMAT); // 50%
 
   pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, 0);
   pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, 0);
@@ -222,4 +245,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
+
+float mapf(float x, float in_min, float in_max, float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
