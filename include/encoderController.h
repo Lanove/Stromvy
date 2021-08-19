@@ -15,9 +15,9 @@ class encoderControllerClass{
     int oldEncoderValue = -1;
     int encoderDelta;
     bool isMoved;
-    ClickEncoder *enc;
     ClickEncoder::Button btnState;
   public:
+    ClickEncoder *enc;
     encoderControllerClass();
     void begin();
     void service();  

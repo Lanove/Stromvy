@@ -45,6 +45,7 @@ const float adcLSBSize = ADS.toVoltage(1);
 
 void setupPWM();
 static void MX_GPIO_Init(void);
+void encoderService(void);
 
 unsigned long adcMillis;
 
@@ -58,7 +59,6 @@ void setup()
   pinMode(NTC1, INPUT_ANALOG);
   pinMode(NTC2, INPUT_ANALOG);
   digitalWrite(LD_EN, HIGH);
-  setupPWM();
   analogReadResolution(12);
 
   lcd.begin();
@@ -70,6 +70,7 @@ void setup()
       ;
   }
   ADS.setGain(1);
+  setupPWM();
 }
 
 void loop()
@@ -93,7 +94,18 @@ void loop()
     pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, uint32_t(float(presetVoltageDAC)));
     presetVoltage = 0.004619 * presetVoltageDAC * presetVoltageFactor;
     presetCurrent = 1.095 * presetCurrentDAC * presetCurrentFactor;
-    Serial.printf("I_DAC : %d ; V_DAC : %d\n", presetCurrentDAC,presetVoltageDAC);
+    // Serial.printf("I_DAC : %d ; V_DAC : %d\n", presetCurrentDAC,presetVoltageDAC);
+  }
+}
+
+uint8_t encoderPrescaler = 0;
+void encoderService(void)
+{
+  encoderPrescaler++;
+  if (encoderPrescaler >= 5)
+  {
+    encoderPrescaler = 0;
+    encoder.enc->service();
   }
 }
 
@@ -107,8 +119,9 @@ void setupPWM()
   // Pwm frequency is calculated with by dividing PWM Clock (72MHz) with ARR/overflow tick
   // set PWM frequency to 14.4kHz (72MHz/5000=14.4KHz)
   pwmTimer->setOverflow(5000); // in TICK FORMAT
+  pwmTimer->attachInterrupt(encoderService);
   // set fan PWM frequency to 100Hz
-  fanTimer->setOverflow(100, HERTZ_FORMAT); // in Hertz FORMAT
+  fanTimer->setOverflow(100, HERTZ_FORMAT); // in Hertz
 
   fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, 70, PERCENT_COMPARE_FORMAT); // 50%
 

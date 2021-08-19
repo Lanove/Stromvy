@@ -7,7 +7,7 @@ encoderControllerClass::encoderControllerClass()
 void encoderControllerClass::begin()
 {
     enc = new ClickEncoder(ENC_CLK, ENC_DT, ENC_BTN, ENC_STEPS);
-    enc->setAccelerationEnabled(true);
+    enc->setAccelerationEnabled(false);
 }
 
 void encoderControllerClass::service()
@@ -15,7 +15,8 @@ void encoderControllerClass::service()
     LCD_SCREEN screen = lcd.getScreen();
     uint8_t cursor = lcd.getCursor();
     bool blinkFlag = lcd.getArrowBlink();
-    enc->service();
+    // enc->service();
+    enc->setAccelerationEnabled(blinkFlag);
     encoderValue += enc->getValue();
     encoderDelta = encoderValue - oldEncoderValue;
     if (encoderValue != oldEncoderValue)
