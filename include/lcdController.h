@@ -4,7 +4,7 @@
 #include <ClickEncoder.h>
 #include <globals.h>
 
-#define LCD_REFRESH_INTERVAL 50 // LCD refresh rate in ms
+#define LCD_REFRESH_INTERVAL 200 // LCD refresh rate in ms
 #define LCDI2C_ADDRESS 0x27
 #define LCD_ROWS 20
 #define LCD_COLS 4
