@@ -33,6 +33,7 @@ DigitalButton loadButton(LD_BTN);
 lcdControllerClass lcd;
 encoderControllerClass encoder;
 eepromControllerClass eeprom;
+indicatorControllerClass indicator;
 
 HardwareTimer *pwmTimer = new HardwareTimer(TIM4);
 HardwareTimer *fanTimer = new HardwareTimer(TIM3);
@@ -42,15 +43,17 @@ RunningAverage raVoltage(ADC_SAMPLE_COUNT);
 RunningAverage raCurrent(ADC_SAMPLE_COUNT);
 
 const float adcLSBSize = ADS.toVoltage(1);
+unsigned long adcMillis, dacMillis, logMillis, lastMillis;
+unsigned long dacVoltage, dacCurrent;
+uint8_t encoderPrescaler = 0;
+uint8_t dacPrescaler = 0;
+bool lastOpMode;
 
 void setupPWM();
 static void MX_GPIO_Init(void);
 void timer4Interrupt(void);
 void fanHandler();
 float mapf(float x, float in_min, float in_max, float out_min, float out_max);
-
-unsigned long adcMillis, dacMillis, logMillis, lastMillis;
-unsigned long dacVoltage, dacCurrent;
 
 void setup()
 {
@@ -74,6 +77,8 @@ void setup()
   }
   ADS.setGain(1);
   setupPWM();
+  indicator.begin();
+  indicator.beepBuzzer(200);
 }
 
 void loop()
@@ -82,19 +87,53 @@ void loop()
   lcd.service();
   encoder.service();
   ClickEncoder::Button b = loadButton.getButton();
+  if (opMode != lastOpMode && ldStatus == STATUS_ON)
+    indicator.beepBuzzer(150, 150, true, 1200);
   if (b == ClickEncoder::Clicked)
   {
     ldStatus = !ldStatus;
     digitalWrite(LD_EN, ldStatus);
+    indicator.beepBuzzer(500);
+    if (ldStatus == STATUS_ON && timerDuration != 0)
+      indicator.beepBuzzer(100, 100, true, 1000);
     dacVoltage = 0;
     dacCurrent = 0;
+    if (timeRunning == 0 && ldStatus == STATUS_OFF)
+      indicator.setIndicator(STANDBY);
+    else if (ldStatus == STATUS_ON && opMode == MODE_CC)
+      indicator.setIndicator(RUNNING_CC);
+    else if (ldStatus == STATUS_ON && opMode == MODE_CV)
+      indicator.setIndicator(RUNNING_CV);
+    else if (timeRunning == 0 && ldStatus == STATUS_OFF)
+      indicator.setIndicator(PAUSED);
   }
-  if (bjtTemp > OVERHEAT_TEMPERATURE || (timeRunning/1000 >= timerDuration && timerDuration != 0))
+  if (indicator.getIndicator() != OVERHEAT_HALT && indicator.getIndicator() != TIMER_HALT)
+  {
+    if (timeRunning == 0 && ldStatus == STATUS_OFF && indicator.getIndicator() != STANDBY)
+      indicator.setIndicator(STANDBY);
+    else if (ldStatus == STATUS_ON && opMode == MODE_CC && indicator.getIndicator() != RUNNING_CC)
+      indicator.setIndicator(RUNNING_CC);
+    else if (ldStatus == STATUS_ON && opMode == MODE_CV && indicator.getIndicator() != RUNNING_CV)
+      indicator.setIndicator(RUNNING_CV);
+    else if (timeRunning != 0 && ldStatus == STATUS_OFF && indicator.getIndicator() != PAUSED)
+      indicator.setIndicator(PAUSED);
+  }
+  if (bjtTemp > OVERHEAT_TEMPERATURE || (timeRunning / 1000 >= timerDuration && timerDuration != 0))
   {
     ldStatus = STATUS_OFF;
     digitalWrite(LD_EN, ldStatus);
     dacVoltage = 0;
     dacCurrent = 0;
+    if (bjtTemp > OVERHEAT_TEMPERATURE && indicator.getIndicator() != OVERHEAT_HALT)
+    {
+      indicator.setIndicator(OVERHEAT_HALT);
+      indicator.beepBuzzer(250, 250, true, 3000);
+    }
+    else if (timeRunning / 1000 >= timerDuration && timerDuration != 0 && indicator.getIndicator() != TIMER_HALT)
+    {
+      indicator.setIndicator(TIMER_HALT);
+      indicator.beepBuzzer(250, 250, true, 3000);
+    }
   }
   if (millis() - logMillis >= logInterval && logStatus)
   {
@@ -148,6 +187,7 @@ void loop()
     }
     lastMillis = cMillis;
   }
+  lastOpMode = opMode;
 }
 
 void fanHandler()
@@ -164,8 +204,6 @@ void fanHandler()
   fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, pwmLO2, PERCENT_COMPARE_FORMAT);
 }
 
-uint8_t encoderPrescaler = 0;
-uint8_t dacPrescaler = 0;
 void timer4Interrupt(void)
 {
   encoderPrescaler++;

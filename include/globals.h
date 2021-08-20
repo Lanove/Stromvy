@@ -2,6 +2,7 @@
 #include <encoderController.h>
 #include <lcdController.h>
 #include <eepromController.h>
+#include <indicatorController.h>
 #include <Wire.h>
 #include <ClickEncoder.h>
 #include <Eeprom24C04_16.h>
@@ -50,9 +51,12 @@
 
 #ifdef PIN_DEFINE
 
-#define LED_LDON PB7
-#define LED_ST2 PB6
-#define LED_ST1 PB5
+#define LED_R_TIMER2_CHANNEL 1
+#define LED_G_TIMER2_CHANNEL 2
+#define LED_B_TIMER2_CHANNEL 3
+#define LED_R PB7
+#define LED_G PB5
+#define LED_B PB6
 #define LED_PC13 PC13
 
 #define ENC_CLK PB4
@@ -63,7 +67,7 @@
 #define LCD_SDA PB11
 #define LCD_SCL PB10
 
-#define BUZZER PB14
+#define BUZZER_PIN PB14
 
 #define LD_BTN PA13
 #define LD_EN PA14
@@ -86,6 +90,8 @@
 #define I_SET_TIMER_CHANNEL 3
 #define V_SET_TIMER_CHANNEL 4
 #endif
+
+extern HardwareTimer *ledTimer;
 
 extern int presetVoltageDAC, // Variable to store digital value (0~5000) of preset voltage
     presetCurrentDAC;        // Variable to store digital value (0~5000) of preset current
@@ -120,5 +126,3 @@ extern float presetVoltageFactor, // EEPROM address 12. Stored on EEPROM on save
     presetCurrentFactor,          // EEPROM address 16. Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
     sensedCurrentFactor,          // EEPROM address 20. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
     sensedVoltageFactor;          // EEPROM address 24. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
-
-extern unsigned long adcMillis;

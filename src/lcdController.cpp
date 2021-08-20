@@ -95,7 +95,7 @@ void lcdControllerClass::service()
             if (timeRunning != lastTimeRunning)
             {
                 clcd->setCursor(12, 0);
-                clcd->printf("%02d:%02d:%02d", (int)timeRunning / 3600000, (int)(timeRunning/1000) % 3600 / 60, (int)(timeRunning/1000) % 60);
+                clcd->printf("%02d:%02d:%02d", (int)timeRunning / 3600000, (int)(timeRunning / 1000) % 3600 / 60, (int)(timeRunning / 1000) % 60);
             }
         }
         else if (screen == SCREEN_LOG)
@@ -143,20 +143,26 @@ void lcdControllerClass::service()
                 clcd->setCursor(16, 1);
                 clcd->printf("%2.0f%cC", minTemp, DEGREE_SYMBOL);
             }
-        }else if(screen == SCREEN_CAL){
-            if(sensedVoltageFactor != lastSensedVoltageFactor){
+        }
+        else if (screen == SCREEN_CAL)
+        {
+            if (sensedVoltageFactor != lastSensedVoltageFactor)
+            {
                 clcd->setCursor(1, 2);
                 clcd->printf("%6.4f", sensedVoltageFactor);
             }
-            if(sensedCurrentFactor != lastSensedCurrentFactor){
+            if (sensedCurrentFactor != lastSensedCurrentFactor)
+            {
                 clcd->setCursor(1, 3);
                 clcd->printf("%6.4f", sensedCurrentFactor);
             }
-            if(presetVoltageFactor != lastPresetVoltageFactor){
+            if (presetVoltageFactor != lastPresetVoltageFactor)
+            {
                 clcd->setCursor(9, 2);
                 clcd->printf("%6.4f", presetVoltageFactor);
             }
-            if(presetCurrentFactor != lastPresetCurrentFactor){
+            if (presetCurrentFactor != lastPresetCurrentFactor)
+            {
                 clcd->setCursor(9, 3);
                 clcd->printf("%6.4f", presetCurrentFactor);
             }
@@ -178,7 +184,7 @@ void lcdControllerClass::service()
             if (sensedCurrent != lastSensedCurrent)
             {
                 clcd->setCursor(0, 1);
-                clcd->printf("%04.0fmA",sensedCurrent);
+                clcd->printf("%04.0fmA", sensedCurrent);
             }
         }
 
@@ -254,7 +260,7 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
     else if (screen == SCREEN_ENERGY)
     {
         clcd->setCursor(0, 0);
-        clcd->printf("%8.0fmWh %02d:%02d:%02d", mWhTotal, (int)timeRunning / 3600000, (int)(timeRunning/1000) % 3600 / 60, (int)(timeRunning/1000) % 60);
+        clcd->printf("%8.0fmWh %02d:%02d:%02d", mWhTotal, (int)timeRunning / 3600000, (int)(timeRunning / 1000) % 3600 / 60, (int)(timeRunning / 1000) % 60);
         clcd->setCursor(0, 1);
         clcd->printf("%8.0fmAh", mAhTotal);
         clcd->setCursor(0, 2);
@@ -342,7 +348,8 @@ void lcdControllerClass::decrementCursor()
 void lcdControllerClass::setArrowBlink(bool blink)
 {
     cursorBlink = blink;
-    if(!cursorBlink){ // Redraw the arrow after changing cursorBlink flag, because the arrow might disappear when flag changed whilst arrow is undisplayed
+    if (!cursorBlink)
+    { // Redraw the arrow after changing cursorBlink flag, because the arrow might disappear when flag changed whilst arrow is undisplayed
         clcd->setCursor(cursorCoordinate[screen][cursor][0], cursorCoordinate[screen][cursor][1]);
         drawCursor(cursor);
     }

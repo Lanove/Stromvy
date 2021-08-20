@@ -24,11 +24,12 @@ void encoderControllerClass::service()
     else
         isMoved = false;
     btnState = enc->getButton();
-
     if (btnState == ClickEncoder::Clicked)
     {
         if (screen == SCREEN_MENU)
         {
+            if (cursor != 2)
+                indicator.beepBuzzer(50);
             if (cursor == 0)
                 lcd.setScreen(SCREEN_MAIN);
             else if (cursor == 1)
@@ -46,7 +47,10 @@ void encoderControllerClass::service()
             (screen == SCREEN_ENERGY && cursor == 1) ||
             (screen == SCREEN_FAN && cursor == 6) ||
             (screen == SCREEN_CAL && cursor == 6))
+        {
             lcd.setScreen(SCREEN_MENU);
+            indicator.beepBuzzer(50);
+        }
     }
     else if (btnState == ClickEncoder::DoubleClicked)
     {
@@ -56,7 +60,10 @@ void encoderControllerClass::service()
             (screen == SCREEN_LOG && cursor == 1) ||
             (screen == SCREEN_FAN && cursor != 6) ||
             (screen == SCREEN_CAL && cursor != 6))
+        {
             lcd.setArrowBlink(!blinkFlag);
+            indicator.beepBuzzer(100);
+        }
         else if (screen == SCREEN_MENU && cursor == 6)
             NVIC_SystemReset();
         else if (screen == SCREEN_ENERGY && cursor == 0)
@@ -64,9 +71,14 @@ void encoderControllerClass::service()
             mWhTotal = 0;
             mAhTotal = 0;
             timeRunning = 0;
+            indicator.setIndicator(STANDBY);
+            indicator.beepBuzzer(100);
         }
         else if (screen == SCREEN_LOG && cursor == 0)
+        {
             logStatus = !logStatus;
+            indicator.beepBuzzer(100);
+        }
     }
     if (encoderDelta > 0 && !blinkFlag)
         lcd.incrementCursor();
