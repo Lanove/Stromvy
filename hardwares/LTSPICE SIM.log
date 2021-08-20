@@ -1,0 +1,26 @@
+Circuit: * C:\Users\1\Documents\EAGLE\projects\Stromvy\LTSPICE SIM.asc
+
+Per .tran options, skipping operating point for transient analysis.
+Changing Tseed to 1e-010
+Changing Tseed to 1e-012
+Changing Tseed to 1e-009
+Heightened Def Con from 1e-009 ++++++++++++to 5e-009
+
+Date: Sat Aug 07 13:54:54 2021
+Total elapsed time: 9.527 seconds.
+
+tnom = 27
+temp = 27
+method = modified trap
+totiter = 64914
+traniter = 64914
+tranpoints = 31529
+accept = 25930
+rejected = 5609
+matrix size = 199
+fillins = 958
+solver = Normal
+Thread vector: 61.3/26.3[4] 18.9/14.5[4] 14.7/11.9[4] 2.8/6.9[1]  2592/500
+Matrix Compiler1: 117.94 KB object code size  75.9/33.3/[12.4]
+Matrix Compiler2: 33.85 KB object code size  17.1/13.8/[4.4]
+
