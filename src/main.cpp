@@ -61,23 +61,22 @@ void setup()
   Wire.setSDA(LCD_SDA);
   Wire.setSCL(LCD_SCL);
   MX_GPIO_Init();
-  pinMode(NTC1, INPUT_ANALOG);
-  pinMode(NTC2, INPUT_ANALOG);
   analogReadResolution(12);
-
+  
   lcd.begin();
   eeprom.begin();
   eeprom.fetch();
   encoder.begin();
+  setupPWM();
+  indicator.begin();
   if (!ADS.begin())
   {
+    indicator.beepBuzzer(1000,250,true,5000);
     Serial.println("Failed to initialize ADS.");
     while (1)
       ;
   }
   ADS.setGain(1);
-  setupPWM();
-  indicator.begin();
   indicator.beepBuzzer(200);
 }
 
@@ -87,8 +86,9 @@ void loop()
   lcd.service();
   encoder.service();
   ClickEncoder::Button b = loadButton.getButton();
-  if (opMode != lastOpMode && ldStatus == STATUS_ON)
+  if (opMode != lastOpMode && ldStatus == STATUS_ON && !indicator.getBeepFlag())
     indicator.beepBuzzer(150, 150, true, 1200);
+
   if (b == ClickEncoder::Clicked)
   {
     ldStatus = !ldStatus;
@@ -98,15 +98,9 @@ void loop()
       indicator.beepBuzzer(100, 100, true, 1000);
     dacVoltage = 0;
     dacCurrent = 0;
-    if (timeRunning == 0 && ldStatus == STATUS_OFF)
-      indicator.setIndicator(STANDBY);
-    else if (ldStatus == STATUS_ON && opMode == MODE_CC)
-      indicator.setIndicator(RUNNING_CC);
-    else if (ldStatus == STATUS_ON && opMode == MODE_CV)
-      indicator.setIndicator(RUNNING_CV);
-    else if (timeRunning == 0 && ldStatus == STATUS_OFF)
-      indicator.setIndicator(PAUSED);
+    indicator.setIndicator(STANDBY); // reset the indicator
   }
+
   if (indicator.getIndicator() != OVERHEAT_HALT && indicator.getIndicator() != TIMER_HALT)
   {
     if (timeRunning == 0 && ldStatus == STATUS_OFF && indicator.getIndicator() != STANDBY)
@@ -118,6 +112,7 @@ void loop()
     else if (timeRunning != 0 && ldStatus == STATUS_OFF && indicator.getIndicator() != PAUSED)
       indicator.setIndicator(PAUSED);
   }
+
   if (bjtTemp > OVERHEAT_TEMPERATURE || (timeRunning / 1000 >= timerDuration && timerDuration != 0))
   {
     ldStatus = STATUS_OFF;
@@ -135,6 +130,7 @@ void loop()
       indicator.beepBuzzer(250, 250, true, 3000);
     }
   }
+
   if (millis() - logMillis >= logInterval && logStatus)
   {
     logMillis = millis();
@@ -152,7 +148,7 @@ void loop()
     fanHandler();
     adcMillis = millis();
     int16_t val_0 = ADS.readADC(0);
-    int16_t val_1 = ADS.readADC(1) + 84;
+    int16_t val_1 = ADS.readADC(1) + 80;
     int16_t ntc1 = analogRead(NTC1);
     raVoltage.addValue(val_0);
     raCurrent.addValue(val_1);
@@ -163,8 +159,6 @@ void loop()
       sensedVoltage = 0;
     if (sensedCurrent < 0)
       sensedCurrent = 0;
-    if (sensedPower < 0)
-      sensedPower = 0.000000001;
     if (mAhTotal < 0)
       mAhTotal = 0;
     if (mWhTotal < 0)

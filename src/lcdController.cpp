@@ -33,10 +33,12 @@ void lcdControllerClass::service()
             if (sensedPower != lastSensedPower)
             {
                 clcd->setCursor(0, 3);
+                if (sensedPower <= 0)
+                    sensedPower = 0;
                 if (sensedPower >= 10.00)
-                    clcd->printf("%05.2fW", sensedPower);
+                    clcd->printf("%05.2fW ", sensedPower);
                 else
-                    clcd->printf("%05.3fW", sensedPower);
+                    clcd->printf("%05.3fW ", sensedPower);
             }
             if (presetVoltage != lastPresetVoltage)
             {
@@ -238,6 +240,8 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
         clcd->setCursor(0, 2);
         clcd->printf("%04.0fmA %c %04.0fmA%c%2.0f%cC", sensedCurrent, BLOCK_SYMBOL, presetCurrent, BLOCK_SYMBOL, bjtTemp, DEGREE_SYMBOL);
         clcd->setCursor(0, 3);
+        if (sensedPower <= 0)
+            sensedPower = 0;
         if (sensedPower >= 10.00)
             clcd->printf("%05.2fW %c MENU  %c%s", sensedPower, BLOCK_SYMBOL, BLOCK_SYMBOL, (timerDuration == 0) ? "Toff" : "Ton");
         else

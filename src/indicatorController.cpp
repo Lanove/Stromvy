@@ -8,7 +8,7 @@ indicatorControllerClass::indicatorControllerClass()
 
 void indicatorControllerClass::begin()
 {
-    ledTimer->setOverflow(15300, HERTZ_FORMAT); // in Hertz
+    ledTimer->setOverflow(20000, HERTZ_FORMAT); // in Hertz
     callback_function_t h = std::bind(&indicatorControllerClass::service, this);
     ledTimer->attachInterrupt(h);
     ledTimer->resume();
