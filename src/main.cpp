@@ -28,32 +28,36 @@ float presetVoltageFactor,            // EEPROM address 12. Stored on EEPROM on 
     sensedCurrentFactor,              // EEPROM address 20. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
     sensedVoltageFactor;              // EEPROM address 24. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
 
-DigitalButton loadButton(LD_BTN);
+DigitalButton loadButton(LD_BTN); // Object for load button
 
-lcdControllerClass lcd;
-encoderControllerClass encoder;
-eepromControllerClass eeprom;
-indicatorControllerClass indicator;
+lcdControllerClass lcd;             // Object for lcdController
+encoderControllerClass encoder;     // Object for encoderController
+eepromControllerClass eeprom;       // Object for eepromController
+indicatorControllerClass indicator; // Object for indicatorController
 
-HardwareTimer *pwmTimer = new HardwareTimer(TIM4);
-HardwareTimer *fanTimer = new HardwareTimer(TIM3);
+HardwareTimer *pwmTimer = new HardwareTimer(TIM4); // Object pointer for pwmTimer on TIMER4
+HardwareTimer *fanTimer = new HardwareTimer(TIM3); // Object pointer for fanTimer on TIMER3
 
-ADS1115 ADS(ADS1115_ADDRESS);
-RunningAverage raVoltage(ADC_SAMPLE_COUNT);
-RunningAverage raCurrent(ADC_SAMPLE_COUNT);
+ADS1115 ADS(ADS1115_ADDRESS);               // Object for ADS1115 16-bit ADC
+RunningAverage raVoltage(ADC_SAMPLE_COUNT); // Object for sensed voltage running average
+RunningAverage raCurrent(ADC_SAMPLE_COUNT); // Object for sensed current running average
 
-const float adcLSBSize = ADS.toVoltage(1);
-unsigned long adcMillis, dacMillis, logMillis, lastMillis;
-unsigned long dacVoltage, dacCurrent;
-uint8_t encoderPrescaler = 0;
-uint8_t dacPrescaler = 0;
-bool lastOpMode;
+const float adcLSBSize = ADS.toVoltage(1); // the size of lsb for ADS1115 ADC, the gain of ADS1115 is 1, so 1 lsb is 125uV
+unsigned long adcMillis,                   // Variable to store millis for adc, fan and energy counter routine
+    dacMillis,                             // Variable to store millis for dac routine
+    logMillis,                             // Variable to store millis for log routine
+    lastMillis;                            // Variable to store millis for energy and time running calculation
+unsigned long dacVoltage,                  // Digital value of voltage DAC (0~5000) range
+    dacCurrent;                            // Digital value of current DAC (0~5000) range
+uint8_t encoderCounter = 0;                // Variable to store the prescaler counter for encoder routine on TIM4
+uint8_t dacCounter = 0;                    // Variable to store the prescaler counter for DAC increment/decrement routine on TIM4
+bool lastOpMode;                           // Used to detect change in CC/CV mode to beep status buzzer
 
-void setupPWM();
-static void MX_GPIO_Init(void);
-void timer4Interrupt(void);
-void fanHandler();
-float mapf(float x, float in_min, float in_max, float out_min, float out_max);
+void setupPWM();                                                               // Function to begin setup of PWM and timers
+static void MX_GPIO_Init(void);                                                // Function to begin setup of every GPIO
+void timer4Interrupt(void);                                                    // Function that is called every TIM4 overflow (interrupt function of TIM4)
+void fanHandler();                                                             // Function to handle the PWM value of fan based on bjt temperature (LO1) and sensed load current (LO2)
+float mapf(float x, float in_min, float in_max, float out_min, float out_max); // float version of map()
 
 void setup()
 {
@@ -61,8 +65,8 @@ void setup()
   Wire.setSDA(LCD_SDA);
   Wire.setSCL(LCD_SCL);
   MX_GPIO_Init();
-  analogReadResolution(12);
-  
+  analogReadResolution(12); // set ADC resolution to 12 bit (0~4095) range
+
   lcd.begin();
   eeprom.begin();
   eeprom.fetch();
@@ -71,13 +75,14 @@ void setup()
   indicator.begin();
   if (!ADS.begin())
   {
-    indicator.beepBuzzer(1000,250,true,5000);
+    indicator.beepBuzzer(1000, 250, true, 5000); // Long beep on start-up mean ADS1115 ADC fail to init
     Serial.println("Failed to initialize ADS.");
     while (1)
       ;
   }
-  ADS.setGain(1);
-  indicator.beepBuzzer(200);
+
+  ADS.setGain(1);            // Use 0~4.096V range
+  indicator.beepBuzzer(200); // Power supply ready beep
 }
 
 void loop()
@@ -85,45 +90,69 @@ void loop()
   opMode = digitalRead(CC_IND);
   lcd.service();
   encoder.service();
+
   ClickEncoder::Button b = loadButton.getButton();
+
+  // If there is opMode change and ldStatus is ON and no current active buzzer beep, then beep the buzzer
   if (opMode != lastOpMode && ldStatus == STATUS_ON && !indicator.getBeepFlag())
     indicator.beepBuzzer(150, 150, true, 1200);
 
+  // If load button clicked
   if (b == ClickEncoder::Clicked)
   {
+    // Invert load status
     ldStatus = !ldStatus;
     digitalWrite(LD_EN, ldStatus);
+
+    // Beep buzzer for 500ms
     indicator.beepBuzzer(500);
+
+    // If load status switched to ON and there are running timer then use the following beep instead of 500ms beep
     if (ldStatus == STATUS_ON && timerDuration != 0)
       indicator.beepBuzzer(100, 100, true, 1000);
+
+    // reset each DAC value (for smooth start-up when ldStatus switched on)
     dacVoltage = 0;
     dacCurrent = 0;
-    indicator.setIndicator(STANDBY); // reset the indicator
+
+    // Reset indicator status (will altered by next if statement)
+    indicator.setIndicator(STANDBY); // reset the indicator (to reset overheat and timer halt status)
   }
 
+  // While the current status is not OVERHEAT or TIMER_HALT then, change the indicator status based on current condition
   if (indicator.getIndicator() != OVERHEAT_HALT && indicator.getIndicator() != TIMER_HALT)
   {
+    // When the time running is still 0 and load status is off then STANDBY
     if (timeRunning == 0 && ldStatus == STATUS_OFF && indicator.getIndicator() != STANDBY)
       indicator.setIndicator(STANDBY);
+    // When the load status is ON and opMode is CC then set status to RUNNING_CC
     else if (ldStatus == STATUS_ON && opMode == MODE_CC && indicator.getIndicator() != RUNNING_CC)
       indicator.setIndicator(RUNNING_CC);
+    // When the load status is ON and opMode is CV then set status to RUNNING_CV
     else if (ldStatus == STATUS_ON && opMode == MODE_CV && indicator.getIndicator() != RUNNING_CV)
       indicator.setIndicator(RUNNING_CV);
+    // When the time running is more than 0 and load status is off then PAUSED
     else if (timeRunning != 0 && ldStatus == STATUS_OFF && indicator.getIndicator() != PAUSED)
       indicator.setIndicator(PAUSED);
   }
 
+  // When the bjtTemp is more than OVERHEAT_TEMPERATURE and timeRunning is getting past timerDuration then
   if (bjtTemp > OVERHEAT_TEMPERATURE || (timeRunning / 1000 >= timerDuration && timerDuration != 0))
   {
+    // Disble the load status
     ldStatus = STATUS_OFF;
     digitalWrite(LD_EN, ldStatus);
+    // reset each DAC value (for smooth start-up when ldStatus switched on)
     dacVoltage = 0;
     dacCurrent = 0;
+
+    // If it's overheat condition then set indicator status to overheat and beep buzzer
     if (bjtTemp > OVERHEAT_TEMPERATURE && indicator.getIndicator() != OVERHEAT_HALT)
     {
       indicator.setIndicator(OVERHEAT_HALT);
       indicator.beepBuzzer(250, 250, true, 3000);
     }
+    // If it's timer run out condition then set indicator status to timer_halt and beep buzzer
     else if (timeRunning / 1000 >= timerDuration && timerDuration != 0 && indicator.getIndicator() != TIMER_HALT)
     {
       indicator.setIndicator(TIMER_HALT);
@@ -131,30 +160,49 @@ void loop()
     }
   }
 
+  // data logging routine
   if (millis() - logMillis >= logInterval && logStatus)
   {
     logMillis = millis();
+    // Send following variables value to serial port every logInterval with CSV format
     // sensedVoltage,sensedCurrent,sensedPower,presetVoltage,presetCurrent,bjtTemp,mWhTotal,mAhTotal,timeRunning (hh:mm:ss)
     Serial.printf("%5.2f;%4.0f;%5.3f;%5.2f;%4.0f;%1.1f;%1.0f;%1.0f;%02d:%02d:%02d\n", sensedVoltage, sensedCurrent, sensedPower, presetVoltage, presetCurrent, bjtTemp, mWhTotal, mAhTotal, (int)timeRunning / 3600000, (int)(timeRunning / 1000) % 3600 / 60, (int)(timeRunning / 1000) % 60);
   }
+
+  // PWM-DAC routine
   if (millis() - dacMillis >= DAC_UPDATE_INTERVAL)
   {
     dacMillis = millis();
     pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, (ldStatus == STATUS_ON) ? uint32_t(float(dacCurrent)) : 0);
     pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, (ldStatus == STATUS_ON) ? uint32_t(float(dacVoltage)) : 0);
   }
+
+  // ADC-FAN-energy counter routine
   if (millis() - adcMillis >= ADC_SAMPLE_INTERVAL)
   {
-    fanHandler();
     adcMillis = millis();
-    int16_t val_0 = ADS.readADC(0);
-    int16_t val_1 = ADS.readADC(1) + 80;
-    int16_t ntc1 = analogRead(NTC1);
+
+    fanHandler();
+
+    // Read ADC of voltage, current and NTC1
+    int16_t val_0 = ADS.readADC(ADC_VOLTAGE_CHANNEL);                      // Read ADC voltage
+    int16_t val_1 = ADS.readADC(ADC_CURRENT_CHANNEL) + ADC_CURRENT_OFFSET; // Add current offset to make calculation work (because 0mA output negative voltage and may mess calculation)
+    int16_t ntc1 = analogRead(NTC1);                                       // 12-bit
+
+    // Add new read out to running average
     raVoltage.addValue(val_0);
     raCurrent.addValue(val_1);
-    sensedVoltage = raVoltage.getAverage() * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor;
-    sensedCurrent = raCurrent.getAverage() * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor;
-    sensedPower = sensedVoltage * (sensedCurrent / 1000);
+
+    // Calculate each sensed voltage,current and power
+    sensedVoltage = raVoltage.getAverage() * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor; // Uses gain to compute actual result on output terminal
+    sensedCurrent = raCurrent.getAverage() * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor;                // in mA, Directly transform ADC read out to current by multiplying with ADC_LSB_TO_CURRENT_MA
+    sensedPower = sensedVoltage * (sensedCurrent / 1000);                                                // P = V*I, since I is on mA we need to divide by 1000
+
+    // Convert binary presetDAC to real voltage/current value
+    presetVoltage = DAC_VOLTAGE_BASE_FACTOR * presetVoltageDAC * presetVoltageFactor;
+    presetCurrent = (DAC_CURRENT_BASE_FACTOR * presetCurrentDAC * presetCurrentFactor) + DAC_CURRENT_OFFSET;
+
+    // Bottom limits
     if (sensedVoltage < 0)
       sensedVoltage = 0;
     if (sensedCurrent < 0)
@@ -163,14 +211,14 @@ void loop()
       mAhTotal = 0;
     if (mWhTotal < 0)
       mWhTotal = 0;
-    const float R2 = 10000 * (4095.0 / (float)ntc1 - 1.0);
+
+    // Calculate temperature of bjt (NTC)
+    const float R2 = NTC_R1 * (4095.0 / (float)ntc1 - 1.0);
     const float logR2 = log(R2);
-    bjtTemp = (1.0 / (1.009249522e-03 + 2.378405444e-04 * logR2 + 2.019202697e-07 * logR2 * logR2 * logR2));
+    bjtTemp = (1.0 / (NTC_c1 + NTC_c2 * logR2 + NTC_c3 * logR2 * logR2 * logR2));
     bjtTemp = bjtTemp - 273.15;
 
-    presetVoltage = DAC_VOLTAGE_BASE_FACTOR * presetVoltageDAC * presetVoltageFactor;
-    presetCurrent = (DAC_CURRENT_BASE_FACTOR * presetCurrentDAC * presetCurrentFactor) + DAC_CURRENT_OFFSET;
-
+    // Calculate and integrate energy and time when load is on
     unsigned long cMillis = millis();
     float elapsedTime = (cMillis - lastMillis) / 1000.0; // in normal second not millisecond
     if (ldStatus == STATUS_ON)
@@ -181,28 +229,33 @@ void loop()
     }
     lastMillis = cMillis;
   }
+  // Store current variable to detect changes on next loop
   lastOpMode = opMode;
 }
 
 void fanHandler()
 {
+  // Convert temperature range and current range to pwm percentage
   unsigned long pwmLO1 = (unsigned long)mapf(bjtTemp, minTemp, maxTemp, float(minPWMLO1), float(maxPWMLO1)),
                 pwmLO2 = (unsigned long)mapf(sensedCurrent, LO2_MIN_CURRENT, LO2_MAX_CURRENT, float(minPWMLO2), float(maxPWMLO2));
+  // Limits
   if (bjtTemp < minTemp)
     pwmLO1 = 0;
   if (pwmLO1 > 100)
     pwmLO1 = 100;
   if (pwmLO2 > 100)
     pwmLO2 = 100;
+  // Apply changes
   fanTimer->setCaptureCompare(LOGIC_OUTPUT1_TIMER_CHANNEL, pwmLO1, PERCENT_COMPARE_FORMAT);
   fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, pwmLO2, PERCENT_COMPARE_FORMAT);
 }
 
 void timer4Interrupt(void)
 {
-  encoderPrescaler++;
-  dacPrescaler++;
-  if (dacPrescaler >= 2)
+  encoderCounter++;
+  dacCounter++;
+  // Run DAC increment/decrement routine every TIM4 overflow divided by TIM4_DAC_PRESCALER
+  if (dacCounter >= TIM4_DAC_PRESCALER)
   {
     if (dacVoltage < presetVoltageDAC)
       dacVoltage++;
@@ -213,9 +266,10 @@ void timer4Interrupt(void)
     else if (dacCurrent > presetCurrentDAC)
       dacCurrent--;
   }
-  if (encoderPrescaler >= 5)
+  // Run encoder routine every TIM4 overflow divided by TIM4_DAC_PRESCALER
+  if (encoderCounter >= TIM4_ENCODER_PRESCALER)
   {
-    encoderPrescaler = 0;
+    encoderCounter = 0;
     encoder.enc->service();
     loadButton.service();
   }

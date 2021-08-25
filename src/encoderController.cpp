@@ -15,8 +15,11 @@ void encoderControllerClass::service()
     LCD_SCREEN screen = lcd.getScreen();
     uint8_t cursor = lcd.getCursor();
     bool blinkFlag = lcd.getArrowBlink();
-    // enc->service();
+
+    // Apply acceleration only when changing value of variable, not when navigating the interface
     enc->setAccelerationEnabled(blinkFlag);
+
+    // Store variables
     encoderValue += enc->getValue();
     encoderDelta = encoderValue - oldEncoderValue;
     if (encoderValue != oldEncoderValue)
@@ -24,12 +27,15 @@ void encoderControllerClass::service()
     else
         isMoved = false;
     btnState = enc->getButton();
-    if (btnState == ClickEncoder::Clicked)
+    
+    if (btnState == ClickEncoder::Clicked) // Screen move navigations (consult to LCD User Interface.xlsx)
     {
         if (screen == SCREEN_MENU)
         {
-            if (cursor != 2)
+            if (cursor != 2) // Beep buzzer if we are not on cursor 2 while clicking (because cursor 2 is timer value)
                 indicator.beepBuzzer(50);
+            
+            // Move to screen x accordingly
             if (cursor == 0)
                 lcd.setScreen(SCREEN_MAIN);
             else if (cursor == 1)
@@ -41,6 +47,7 @@ void encoderControllerClass::service()
             else if (cursor == 5)
                 lcd.setScreen(SCREEN_CAL);
         }
+        // Back buttons to SCREEN_MENU
         if ((screen == SCREEN_MAIN && cursor == 2) ||
             (screen == SCREEN_ENERGY && cursor == 1) ||
             (screen == SCREEN_LOG && cursor == 2) ||
@@ -55,6 +62,7 @@ void encoderControllerClass::service()
     else if (btnState == ClickEncoder::DoubleClicked)
     {
         eeprom.update(); // Try to update EEPROM every double click
+        // cursor and screen position that is used for changing value of variables
         if ((screen == SCREEN_MAIN && (cursor == 0 || cursor == 1)) ||
             (screen == SCREEN_MENU && cursor == 2) ||
             (screen == SCREEN_LOG && cursor == 1) ||
@@ -64,8 +72,10 @@ void encoderControllerClass::service()
             lcd.setArrowBlink(!blinkFlag);
             indicator.beepBuzzer(100);
         }
+        // Double clicking on following screen and cursor will reset the microcontroller
         else if (screen == SCREEN_MENU && cursor == 6)
             NVIC_SystemReset();
+        // Double clicking on following screen and cursor will reset the energy and timeRunning values to 0
         else if (screen == SCREEN_ENERGY && cursor == 0)
         {
             mWhTotal = 0;
@@ -74,16 +84,20 @@ void encoderControllerClass::service()
             indicator.setIndicator(STANDBY);
             indicator.beepBuzzer(100);
         }
+        // Double clicking on following screen and cursor will invert logStatus value
         else if (screen == SCREEN_LOG && cursor == 0)
         {
             logStatus = !logStatus;
             indicator.beepBuzzer(100);
         }
     }
+
+    // Move the cursor according to direction when we are on navigation mode
     if (encoderDelta > 0 && !blinkFlag)
         lcd.incrementCursor();
     else if (encoderDelta < 0 && !blinkFlag)
         lcd.decrementCursor();
+    // Change variable values when encoder is moved whilst on blinkFlag (consult to LCD User Interface.xlsx)
     else if (encoderDelta != 0 && blinkFlag)
     {
         if (screen == SCREEN_MAIN)
@@ -129,6 +143,7 @@ void encoderControllerClass::service()
         }
     }
 
+    // Limits
     if (presetVoltageDAC < MIN_V_DAC)
         presetVoltageDAC = MIN_V_DAC;
     else if (presetVoltageDAC > MAX_V_DAC)

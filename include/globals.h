@@ -10,50 +10,68 @@
 #include <RunningAverage.h>
 #include "ADS1X15.h"
 
-#define PIN_DEFINE
+#define PIN_DEFINE // DO NOT DELETE
 
-#define MODE_CC 0
-#define MODE_CV 1
+#define MODE_CC 0 // Used for opMode
+#define MODE_CV 1 // Used for opMode
 
-#define STATUS_ON 1
-#define STATUS_OFF 0
+#define STATUS_ON 1  // Used for ldStatus
+#define STATUS_OFF 0 // Used for ldStatus
 
 #define ADS1115_ADDRESS 0x4A
 
-#define OVERHEAT_TEMPERATURE 65
-#define LO2_MIN_CURRENT 0.0
-#define LO2_MAX_CURRENT 2000.0
+#define OVERHEAT_TEMPERATURE 65 // maximum temperature for BJT to shutdown and goes OVERHEAT_HALT
+#define LO2_MIN_CURRENT 0.0     // minimum current load for LO2 pwm map
+#define LO2_MAX_CURRENT 2000.0  // maximum current load for LO2 pwm map
 
-#define DAC_UPDATE_INTERVAL 10
-#define DAC_VOLTAGE_BASE_FACTOR 0.004619
-#define DAC_CURRENT_BASE_FACTOR 1.095
-#define DAC_CURRENT_OFFSET 19 // in mA
+#define DAC_UPDATE_INTERVAL 10           // setCaptureCompare call interval, in msf
+#define DAC_VOLTAGE_BASE_FACTOR 0.004619 // DAC to real voltage factor
+#define DAC_CURRENT_BASE_FACTOR 1.095    // DAC to real current factor
+#define DAC_CURRENT_OFFSET 19            // in mA
 
-#define ADC_SAMPLE_INTERVAL 50
-#define ADC_SAMPLE_COUNT 20
-#define ADC_VOLTAGE_BASE_FACTOR 4.7299732
-#define ADC_LSB_TO_CURRENT_MA 0.201560928
+#define ADC_VOLTAGE_CHANNEL 0             // ADS1115 channel that is used to sense load voltage
+#define ADC_CURRENT_CHANNEL 1             // ADS1115 channel that is used to sense load current
+#define ADC_SAMPLE_INTERVAL 50            // ADC sample interval (also used for fan and energy)
+#define ADC_SAMPLE_COUNT 20               // ADC running average total sample count (the bigger the value, the smoother the display but slower)
+#define ADC_VOLTAGE_BASE_FACTOR 4.7299732 // Sensed voltage to real voltage factor
+#define ADC_LSB_TO_CURRENT_MA 0.201560928 // ADC-LSB to real current
+#define ADC_CURRENT_OFFSET 80             // ADC binary offset to cancel negative values
 
-#define MAX_V_DAC 4330
-#define MAX_I_DAC 2800
-#define MIN_V_DAC 100
-#define MIN_I_DAC 0
-#define MAX_TIMER_DURATION 36000000
+#define NTC_R1 10000.0         // The R1 of voltage divider for NTC
+#define NTC_c1 1.009249522e-03 //c1 constant
+#define NTC_c2 2.378405444e-04 //c2 constant
+#define NTC_c3 2.019202697e-07 //c3 constant
+
+#define MAX_V_DAC 4330 // Maximum DAC binary value (~20V)
+#define MAX_I_DAC 2800 // Maximum DAC binary value (~3000mA)
+#define MIN_V_DAC 100  // Minimum DAC binary value (~0.5V)
+#define MIN_I_DAC 0    // Minimum DAC binary value (~19mA)
+
+#define MAX_TIMER_DURATION 36000000 // in ms, 36000000 = 10 Hour
 #define MIN_TIMER_DURATION 0
-#define MAX_LOG_INTERVAL 60000
-#define MIN_LOG_INTERVAL 200
-#define MIN_FAN_PWM 0
-#define MAX_FAN_PWM 100
-#define MIN_FAN_TEMP 0
-#define MAX_FAN_TEMP 99
-#define MAX_CALIBRATION_FACTOR 10.0000
-#define MIN_CALIBRATION_FACTOR 0.0001
+#define MAX_LOG_INTERVAL 60000 // in ms, 60000 = 1 Minute
+#define MIN_LOG_INTERVAL 200   // in ms, 200 = 0.2 Second
+
+#define MIN_FAN_PWM 0   // The absolute minimum for PWM value of fans
+#define MAX_FAN_PWM 100 // The absolute maximum for PWM value of fans
+
+#define MIN_FAN_TEMP 0  // The absolute minimum for bjt temperature for fan pwm map
+#define MAX_FAN_TEMP 99 // The absolute maximum bjt temperature for fan pwm map
+
+#define MAX_CALIBRATION_FACTOR 10.0000 // Self-explanatory
+#define MIN_CALIBRATION_FACTOR 0.0001  // Self-explanatory
+
+#define TIM4_ENCODER_PRESCALER 5 // prescaler for encoder routine call
+#define TIM4_DAC_PRESCALER 2     // prescaler for dac increment/decrement routine call
+
+#define LOGIC_OUTPUT1_TIMER_CHANNEL 3 // Timer channel used for LO1 associated with hardware pin (PB0 is T3C3)
+#define LOGIC_OUTPUT2_TIMER_CHANNEL 4 // Timer channel used for LO2 associated with hardware pin (PB1 is T3C4)
+
+#define I_SET_TIMER_CHANNEL 3 // Timer channel used for current adjustment associated with hardware pin (PB8 is T4C3)
+#define V_SET_TIMER_CHANNEL 4 // Timer channel used for current adjustment associated with hardware pin (PB8 is T4C4)
 
 #ifdef PIN_DEFINE
 
-#define LED_R_TIMER2_CHANNEL 1
-#define LED_G_TIMER2_CHANNEL 2
-#define LED_B_TIMER2_CHANNEL 3
 #define LED_R PB7
 #define LED_G PB5
 #define LED_B PB6
@@ -75,9 +93,6 @@
 #define LOGIC_OUTPUT1 PB0
 #define LOGIC_OUTPUT2 PB1
 
-#define LOGIC_OUTPUT1_TIMER_CHANNEL 3
-#define LOGIC_OUTPUT2_TIMER_CHANNEL 4
-
 #define NTC1 PA2
 #define NTC2 PA3
 
@@ -86,12 +101,9 @@
 
 #define I_SET PB8
 #define V_SET PB9
-
-#define I_SET_TIMER_CHANNEL 3
-#define V_SET_TIMER_CHANNEL 4
 #endif
 
-extern HardwareTimer *ledTimer;
+extern HardwareTimer *ledTimer; // used for indicatorControllerClass
 
 extern int presetVoltageDAC, // Variable to store digital value (0~5000) of preset voltage
     presetCurrentDAC;        // Variable to store digital value (0~5000) of preset current

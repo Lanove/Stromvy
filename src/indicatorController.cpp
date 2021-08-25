@@ -8,15 +8,16 @@ indicatorControllerClass::indicatorControllerClass()
 
 void indicatorControllerClass::begin()
 {
-    ledTimer->setOverflow(20000, HERTZ_FORMAT); // in Hertz
+    ledTimer->setOverflow(SOFT_PWM_FREQUENCY, HERTZ_FORMAT); // in Hertz
     callback_function_t h = std::bind(&indicatorControllerClass::service, this);
-    ledTimer->attachInterrupt(h);
+    ledTimer->attachInterrupt(h); // Attach h member of object
     ledTimer->resume();
 }
 
 void indicatorControllerClass::service()
 {
     unsigned long mil = millis();
+    // Apply SoftPWM when status is not STANDBY
     if (currentIndicator != STANDBY)
     {
         captureCompare++;
@@ -34,6 +35,7 @@ void indicatorControllerClass::service()
             digitalWrite(LED_B, HIGH);
         }
     }
+    // Just turn on green when it's STANDBY
     else
     {
         digitalWrite(LED_R, LOW);
@@ -45,10 +47,12 @@ void indicatorControllerClass::service()
         if (mil - ledMillis >= ledSineLoopPeriod)
         {
             ledMillis = mil;
+            // Increase/Decrease according to direction
             if (direction == POSITIVE)
                 sine++;
             else
                 sine--;
+            // Change direction every 90 degree
             if (sine == 0 || sine == 90)
                 direction = !direction;
             float sineFactor = isin(sine);
@@ -60,8 +64,9 @@ void indicatorControllerClass::service()
     }
     else if (currentIndicator == OVERHEAT_HALT || currentIndicator == TIMER_HALT)
     {
-        if (mil - ledMillis >= 250)
+        if (mil - ledMillis >= BLINK_PERIOD)
         {
+            // Invert ON/OFF every interval (blink)
             ledMillis = mil;
             direction = !direction;
             r = (direction) ? 0 : indicatorLookup[currentIndicator][R_POS];

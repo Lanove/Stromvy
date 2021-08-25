@@ -8,7 +8,10 @@ void eepromControllerClass::begin()
 }
 void eepromControllerClass::fetch()
 {
+    // Store to outputBuffer
     eep->readBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer);
+
+    // Copy binary values from EEPROM that is stored on outputBuffer to each associated variables
     memcpy(&minPWMLO1, &outputBuffer[0], sizeof(int8_t));
     memcpy(&maxPWMLO1, &outputBuffer[1], sizeof(int8_t));
     memcpy(&minPWMLO2, &outputBuffer[2], sizeof(int8_t));
@@ -19,6 +22,7 @@ void eepromControllerClass::fetch()
     memcpy(&presetCurrentFactor, &outputBuffer[16], sizeof(float));
     memcpy(&sensedVoltageFactor, &outputBuffer[20], sizeof(float));
     memcpy(&sensedCurrentFactor, &outputBuffer[24], sizeof(float));
+    // Update last fetched variables
     lastMinPWMLO1 = minPWMLO1;
     lastMaxPWMLO1 = maxPWMLO1;
     lastMinPWMLO2 = minPWMLO2;

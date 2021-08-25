@@ -3,7 +3,10 @@
 #include <Arduino.h>
 #include <globals.h>
 
+#define SOFT_PWM_FREQUENCY 20000
+
 #define SINE_PERIOD 2000 // in ms
+#define BLINK_PERIOD 250 // in ms
 
 #define INDICATE_NUM 6 // Total of indicator mode in INDICATE typedef enum
 #define R_POS 0        // position of R on indicatorLookup array
