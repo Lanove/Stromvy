@@ -77,12 +77,17 @@ void setup()
   {
     indicator.beepBuzzer(1000, 250, true, 5000); // Long beep on start-up mean ADS1115 ADC fail to init
     Serial.println("Failed to initialize ADS.");
-    while (1)
-      ;
+    delay(6000);
+    NVIC_SystemReset();
   }
 
   ADS.setGain(1);            // Use 0~4.096V range
   indicator.beepBuzzer(200); // Power supply ready beep
+  IWatchdog.begin(WATCHDOG_TIMEOUT);
+  if(IWatchdog.isReset()){
+    indicator.beepBuzzer(2000, 1000, true, 5000); // Long beep on start-up mean ADS1115 ADC fail to init
+    IWatchdog.clearReset();
+  }
 }
 
 void loop()
@@ -189,6 +194,18 @@ void loop()
     int16_t val_1 = ADS.readADC(ADC_CURRENT_CHANNEL) + ADC_CURRENT_OFFSET; // Add current offset to make calculation work (because 0mA output negative voltage and may mess calculation)
     int16_t ntc1 = analogRead(NTC1);                                       // 12-bit
 
+    if(raVoltage.getCount() >=65500){
+      float temp = raVoltage.getAverage();
+      raVoltage.clear();
+      raVoltage.addValue(temp);
+    }
+
+    if(raCurrent.getCount() >=65500){
+      float temp = raCurrent.getAverage();
+      raCurrent.clear();
+      raCurrent.addValue(temp);
+    }
+
     // Add new read out to running average
     raVoltage.addValue(val_0);
     raCurrent.addValue(val_1);
@@ -231,6 +248,7 @@ void loop()
   }
   // Store current variable to detect changes on next loop
   lastOpMode = opMode;
+  IWatchdog.reload();
 }
 
 void fanHandler()

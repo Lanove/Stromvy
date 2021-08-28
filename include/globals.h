@@ -9,6 +9,9 @@
 #include "stm32f1xx_hal.h"
 #include <RunningAverage.h>
 #include "ADS1X15.h"
+#include <IWatchdog.h>
+
+#define WATCHDOG_TIMEOUT 4000000 // in uS
 
 #define PIN_DEFINE // DO NOT DELETE
 
