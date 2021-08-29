@@ -25,6 +25,7 @@ private:
     byte outputBuffer[EEPROM_TOTAL_ADDRESS]; // used to store temporary values on readBytes and writeBytes
 
 public:
+    ~eepromControllerClass(); // deConstructor
     eepromControllerClass(); // Constructor
     void begin(); // Init
     void fetch(); // Read the content of EEPROM and store it on associated variables

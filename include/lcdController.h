@@ -109,6 +109,8 @@ private:
 
 public:
     lcdControllerClass();
+    ~lcdControllerClass();
+
     void begin();
     void service();
 

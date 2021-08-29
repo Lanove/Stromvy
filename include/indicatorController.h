@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <globals.h>
 
-#define SOFT_PWM_FREQUENCY 20000
+#define SOFT_PWM_FREQUENCY 15300
 
 #define SINE_PERIOD 2000 // in ms
 #define BLINK_PERIOD 250 // in ms
@@ -125,6 +125,8 @@ const uint8_t isinTable8[] = {
 class indicatorControllerClass
 {
 private:
+
+HardwareTimer *ledTimer;
     INDICATE currentIndicator = INDICATE::STANDBY; // Default indicator mode is standby
     uint32_t beepMillis,
         firstBeepMillis,
@@ -149,6 +151,7 @@ private:
     };
 public:
     indicatorControllerClass();
+    ~indicatorControllerClass();
     void begin();
     void service();
     void setIndicator(INDICATE indicator);

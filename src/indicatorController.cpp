@@ -1,13 +1,17 @@
 #include "indicatorController.h"
 
-HardwareTimer *ledTimer = new HardwareTimer(TIM2);
-
 indicatorControllerClass::indicatorControllerClass()
 {
 }
 
-void indicatorControllerClass::begin()
+indicatorControllerClass::~indicatorControllerClass()
 {
+    delete ledTimer;
+}
+
+void indicatorControllerClass::begin()
+{       
+    ledTimer = new HardwareTimer(TIM2);
     ledTimer->setOverflow(SOFT_PWM_FREQUENCY, HERTZ_FORMAT); // in Hertz
     callback_function_t h = std::bind(&indicatorControllerClass::service, this);
     ledTimer->attachInterrupt(h); // Attach h member of object

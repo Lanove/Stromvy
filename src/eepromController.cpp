@@ -1,6 +1,8 @@
 #include <eepromController.h>
 
 eepromControllerClass::eepromControllerClass() {}
+eepromControllerClass::~eepromControllerClass() {delete eep; }
+
 void eepromControllerClass::begin()
 {
     eep = new Eeprom24C04_16(EEPROM_ADDRESS);

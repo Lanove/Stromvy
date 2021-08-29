@@ -58,6 +58,8 @@ static void MX_GPIO_Init(void);                                                /
 void timer4Interrupt(void);                                                    // Function that is called every TIM4 overflow (interrupt function of TIM4)
 void fanHandler();                                                             // Function to handle the PWM value of fan based on bjt temperature (LO1) and sensed load current (LO2)
 float mapf(float x, float in_min, float in_max, float out_min, float out_max); // float version of map()
+void display_mallinfo(void);
+unsigned long malMillis;
 
 void setup()
 {
@@ -84,7 +86,8 @@ void setup()
   ADS.setGain(1);            // Use 0~4.096V range
   indicator.beepBuzzer(200); // Power supply ready beep
   IWatchdog.begin(WATCHDOG_TIMEOUT);
-  if(IWatchdog.isReset()){
+  if (IWatchdog.isReset())
+  {
     indicator.beepBuzzer(2000, 1000, true, 5000); // Long beep on start-up mean ADS1115 ADC fail to init
     IWatchdog.clearReset();
   }
@@ -194,25 +197,27 @@ void loop()
     int16_t val_1 = ADS.readADC(ADC_CURRENT_CHANNEL) + ADC_CURRENT_OFFSET; // Add current offset to make calculation work (because 0mA output negative voltage and may mess calculation)
     int16_t ntc1 = analogRead(NTC1);                                       // 12-bit
 
-    if(raVoltage.getCount() >=65500){
+    if (raVoltage.getCount() >= 65500)
+    {
       float temp = raVoltage.getAverage();
       raVoltage.clear();
       raVoltage.addValue(temp);
     }
 
-    if(raCurrent.getCount() >=65500){
+    if (raCurrent.getCount() >= 65500)
+    {
       float temp = raCurrent.getAverage();
       raCurrent.clear();
       raCurrent.addValue(temp);
     }
 
     // Add new read out to running average
-    raVoltage.addValue(val_0);
-    raCurrent.addValue(val_1);
+    raVoltage.addValue(float(val_0) * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor);
+    raCurrent.addValue(float(val_1) * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor);
 
     // Calculate each sensed voltage,current and power
-    sensedVoltage = raVoltage.getAverage() * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor; // Uses gain to compute actual result on output terminal
-    sensedCurrent = raCurrent.getAverage() * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor;                // in mA, Directly transform ADC read out to current by multiplying with ADC_LSB_TO_CURRENT_MA
+    sensedVoltage = raVoltage.getAverage(); // Uses gain to compute actual result on output terminal
+    sensedCurrent = raCurrent.getAverage();                // in mA, Directly transform ADC read out to current by multiplying with ADC_LSB_TO_CURRENT_MA
     sensedPower = sensedVoltage * (sensedCurrent / 1000);                                                // P = V*I, since I is on mA we need to divide by 1000
 
     // Convert binary presetDAC to real voltage/current value
@@ -374,4 +379,56 @@ static void MX_GPIO_Init(void)
 float mapf(float x, float in_min, float in_max, float out_min, float out_max)
 {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void display_mallinfo(void)
+{
+
+  static char *ramstart = &_sdata;
+  static char *ramend = &_estack;
+  static char *minSP = (char *)(ramend - &_Min_Stack_Size);
+  char *heapend = (char *)sbrk(0);
+  char *stack_ptr = (char *)__get_MSP();
+  struct mallinfo mi = mallinfo();
+
+  Serial.print("Total non-mmapped bytes (arena):       ");
+  Serial.println(mi.arena);
+  Serial.print("# of free chunks (ordblks):            ");
+  Serial.println(mi.ordblks);
+  Serial.print("# of free fastbin blocks (smblks):     ");
+  Serial.println(mi.smblks);
+  Serial.print("# of mapped regions (hblks):           ");
+  Serial.println(mi.hblks);
+  Serial.print("Bytes in mapped regions (hblkhd):      ");
+  Serial.println(mi.hblkhd);
+  Serial.print("Max. total allocated space (usmblks):  ");
+  Serial.println(mi.usmblks);
+  Serial.print("Free bytes held in fastbins (fsmblks): ");
+  Serial.println(mi.fsmblks);
+  Serial.print("Total allocated space (uordblks):      ");
+  Serial.println(mi.uordblks);
+  Serial.print("Total free space (fordblks):           ");
+  Serial.println(mi.fordblks);
+  Serial.print("Topmost releasable block (keepcost):   ");
+  Serial.println(mi.keepcost);
+
+  Serial.print("RAM Start at:       0x");
+  Serial.println((unsigned long)ramstart, HEX);
+  Serial.print("Data/Bss end at:    0x");
+  Serial.println((unsigned long)&_end, HEX);
+  Serial.print("Heap end at:        0x");
+  Serial.println((unsigned long)heapend, HEX);
+  Serial.print("Stack Ptr end at:   0x");
+  Serial.println((unsigned long)stack_ptr, HEX);
+  Serial.print("RAM End at:         0x");
+  Serial.println((unsigned long)ramend, HEX);
+
+  Serial.print("Heap RAM Used:      ");
+  Serial.println(mi.uordblks);
+  Serial.print("Program RAM Used:   ");
+  Serial.println(&_end - ramstart);
+  Serial.print("Stack RAM Used:     ");
+  Serial.println(ramend - stack_ptr);
+  Serial.print("Estimated Free RAM: ");
+  Serial.println(((stack_ptr < minSP) ? stack_ptr : minSP) - heapend + mi.fordblks);
 }

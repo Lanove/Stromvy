@@ -1,0 +1,25 @@
+Modification done on PCB
+- Swapped Inverting and Non-inverting of U5G4 (Voltage op-amp)
+- Swapped D+ and D-
+- Swapped SDA and SCL
+- Used bigger transistor for Q5/Q6 (Series Pass Driver)
+- Use 10 ohm for resistor of series pass transistor
+- Didn't use C36,C34 and C33 or high pass frequency capacitor
+- Use 4-wire sensing for current amplifier (Modified non-inverting amp to differential amp for current amp)
+- Use ADS1115 for ADC (With ferrite filter on ADS supply)
+
+To-do modification / Good thing to consider on next version :
+- Use FAN label instead of LO (on schematic and code).
+- Tie BOOT1 to GND with 10k, and BOOT0 to GND with 10k and button that is connected to 3v3
+- Add debouncing capacitor for RST and BOOT0 button
+- Change connector that is too big for Fan,LCD,Encoder and other connectors that are similar.
+- Add RTC Power protection with BAT54, and add RTC battery connector.
+- Use 2n7002 for relay and buzzer
+- Move load relay to after emittor of series pass transistor
+- Use bigger transistor for Q5/Q6 (Series Pass Driver)
+- Remove U5G1 because U5G3 already fulfill the CC/CV detection job
+- Remove ferrite bead on VADC of STM32F
+- ADD JTAG header for debugging
+- Make the PCB smaller (Pack the component closer)
+- Add sense relay (and auto detection)
+- Use small button for RST and BOOT0 button

@@ -3,6 +3,10 @@
 
 lcdControllerClass::lcdControllerClass() {}
 
+lcdControllerClass::~lcdControllerClass(){
+    delete clcd;
+}
+
 void lcdControllerClass::begin()
 {
     clcd = new LiquidCrystal_I2C(LCDI2C_ADDRESS, LCD_ROWS, LCD_COLS);

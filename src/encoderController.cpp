@@ -3,7 +3,10 @@
 encoderControllerClass::encoderControllerClass()
 {
 }
-
+encoderControllerClass::~encoderControllerClass()
+{
+    delete enc;
+}
 void encoderControllerClass::begin()
 {
     enc = new ClickEncoder(ENC_CLK, ENC_DT, ENC_BTN, ENC_STEPS);

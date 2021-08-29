@@ -15,6 +15,8 @@ private:
 public:
   ClickEncoder *enc;        // Object pointer is in public because service() need to be called on 1ms interval (on TIM4 with prescaler interrupt)
   encoderControllerClass(); // Constructor
+  ~encoderControllerClass(); // Constructor
+
   void begin();             // Init
   void service();           // Only call if you want to updates encoder variables
   int getEncoderDelta();
