@@ -12,7 +12,8 @@
 #include <IWatchdog.h>
 #include <malloc.h>
 
-#define WATCHDOG_TIMEOUT 4000000 // in uS
+#define WATCHDOG_TIMEOUT 4000000 // in uS (4s)
+#define I2C_REFRESH_INTERVAL 300000 // in ms (300s/5m)
 
 #define PIN_DEFINE // DO NOT DELETE
 

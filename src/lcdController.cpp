@@ -1,7 +1,9 @@
 
 #include <lcdController.h>
 
-lcdControllerClass::lcdControllerClass() {}
+lcdControllerClass::lcdControllerClass() {
+    clcd = new LiquidCrystal_I2C(LCDI2C_ADDRESS, LCD_ROWS, LCD_COLS);
+}
 
 lcdControllerClass::~lcdControllerClass(){
     delete clcd;
@@ -9,7 +11,6 @@ lcdControllerClass::~lcdControllerClass(){
 
 void lcdControllerClass::begin()
 {
-    clcd = new LiquidCrystal_I2C(LCDI2C_ADDRESS, LCD_ROWS, LCD_COLS);
     // initialize the LCD
     clcd->begin();
     // Turn on the blacklight

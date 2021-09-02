@@ -46,7 +46,8 @@ const float adcLSBSize = ADS.toVoltage(1); // the size of lsb for ADS1115 ADC, t
 unsigned long adcMillis,                   // Variable to store millis for adc, fan and energy counter routine
     dacMillis,                             // Variable to store millis for dac routine
     logMillis,                             // Variable to store millis for log routine
-    lastMillis;                            // Variable to store millis for energy and time running calculation
+    lastMillis,                            // Variable to store millis for energy and time running calculation
+    i2cRefreshMillis;
 unsigned long dacVoltage,                  // Digital value of voltage DAC (0~5000) range
     dacCurrent;                            // Digital value of current DAC (0~5000) range
 uint8_t encoderCounter = 0;                // Variable to store the prescaler counter for encoder routine on TIM4
@@ -100,6 +101,14 @@ void loop()
   encoder.service();
 
   ClickEncoder::Button b = loadButton.getButton();
+
+  // Refresh I2C Line every I2C_REFRESH_INTERVAL (5m) or when ldButton double click
+  if(millis() - i2cRefreshMillis >= I2C_REFRESH_INTERVAL || b == ClickEncoder::DoubleClicked){
+    i2cRefreshMillis = millis();
+    LCD_SCREEN currentScreen = lcd.getScreen(); // Store current screen because begin reset screen to SCREEN_MAIN
+    lcd.begin(); // LCD begin already cover I2C Wire.begin();
+    lcd.setScreen(currentScreen);
+  }
 
   // If there is opMode change and ldStatus is ON and no current active buzzer beep, then beep the buzzer
   if (opMode != lastOpMode && ldStatus == STATUS_ON && !indicator.getBeepFlag())
