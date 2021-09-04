@@ -1,11 +1,13 @@
 
 #include <lcdController.h>
 
-lcdControllerClass::lcdControllerClass() {
+lcdControllerClass::lcdControllerClass()
+{
     clcd = new LiquidCrystal_I2C(LCDI2C_ADDRESS, LCD_ROWS, LCD_COLS);
 }
 
-lcdControllerClass::~lcdControllerClass(){
+lcdControllerClass::~lcdControllerClass()
+{
     delete clcd;
 }
 
@@ -44,9 +46,9 @@ void lcdControllerClass::service()
                         clcd->printf("%05.2fW ", sensedPower);
                     else
                         clcd->printf("%05.3fW ", sensedPower);
-                }else
-                        clcd->printf("%05.3fW ", 0.00);
-
+                }
+                else
+                    clcd->printf("%05.3fW ", 0.00);
             }
             if (presetVoltage != lastPresetVoltage)
             {
@@ -254,9 +256,9 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
                 clcd->printf("%05.2fW %c MENU  %c%s", sensedPower, BLOCK_SYMBOL, BLOCK_SYMBOL, (timerDuration == 0) ? "Toff" : "Ton");
             else
                 clcd->printf("%05.3fW %c MENU  %c%s", sensedPower, BLOCK_SYMBOL, BLOCK_SYMBOL, (timerDuration == 0) ? "Toff" : "Ton");
-        }else
-                clcd->printf("%05.3fW %c MENU  %c%s", 0.0, BLOCK_SYMBOL, BLOCK_SYMBOL, (timerDuration == 0) ? "Toff" : "Ton");
-        
+        }
+        else
+            clcd->printf("%05.3fW %c MENU  %c%s", 0.0, BLOCK_SYMBOL, BLOCK_SYMBOL, (timerDuration == 0) ? "Toff" : "Ton");
     }
     else if (screen == SCREEN_MENU)
     {
@@ -270,7 +272,7 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
         else
             clcd->printf(" Timer: %02d:%02d:%02d Rst", (int)timerDuration / 3600, (int)timerDuration % 3600 / 60, (int)timerDuration % 60);
         clcd->setCursor(0, 3);
-        clcd->printf(" Data Logging");
+        clcd->printf(" Data Logging    Dbg");
     }
     else if (screen == SCREEN_ENERGY)
     {
@@ -318,6 +320,21 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
         clcd->printf(" %06.4f  %06.4f", sensedVoltageFactor, presetVoltageFactor);
         clcd->setCursor(0, 3);
         clcd->printf(" %06.4f  %06.4f", sensedCurrentFactor, presetCurrentFactor);
+    }
+    else if (screen == SCREEN_DEBUG)
+    {
+        static char *ramstart = &_sdata;
+        static char *ramend = &_estack;
+        static char *minSP = (char *)(ramend - &_Min_Stack_Size);
+        char *heapend = (char *)sbrk(0);
+        char *stack_ptr = (char *)__get_MSP();
+        struct mallinfo mi = mallinfo();
+        clcd->setCursor(0, 0);
+        clcd->printf("Timeout ADC:%d", adcTimeoutCounter);
+        clcd->setCursor(0, 1);
+        clcd->printf("Free RAM:%d", ((stack_ptr < minSP) ? stack_ptr : minSP) - heapend + mi.fordblks);
+        clcd->setCursor(15, 3);
+        clcd->printf("%cBack", ARROW_SYMBOL);
     }
     setCursor(0);
     setArrowBlink(false);

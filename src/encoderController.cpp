@@ -30,14 +30,14 @@ void encoderControllerClass::service()
     else
         isMoved = false;
     btnState = enc->getButton();
-    
+
     if (btnState == ClickEncoder::Clicked) // Screen move navigations (consult to LCD User Interface.xlsx)
     {
         if (screen == SCREEN_MENU)
         {
             if (cursor != 2) // Beep buzzer if we are not on cursor 2 while clicking (because cursor 2 is timer value)
                 indicator.beepBuzzer(50);
-            
+
             // Move to screen x accordingly
             if (cursor == 0)
                 lcd.setScreen(SCREEN_MAIN);
@@ -49,6 +49,8 @@ void encoderControllerClass::service()
                 lcd.setScreen(SCREEN_FAN);
             else if (cursor == 5)
                 lcd.setScreen(SCREEN_CAL);
+            else if (cursor == 7)
+                lcd.setScreen(SCREEN_DEBUG);
         }
         // Back buttons to SCREEN_MENU
         if ((screen == SCREEN_MAIN && cursor == 2) ||
@@ -56,7 +58,8 @@ void encoderControllerClass::service()
             (screen == SCREEN_LOG && cursor == 2) ||
             (screen == SCREEN_ENERGY && cursor == 1) ||
             (screen == SCREEN_FAN && cursor == 6) ||
-            (screen == SCREEN_CAL && cursor == 6))
+            (screen == SCREEN_CAL && cursor == 6) || 
+            (screen == SCREEN_DEBUG && cursor == 0))
         {
             lcd.setScreen(SCREEN_MENU);
             indicator.beepBuzzer(50);

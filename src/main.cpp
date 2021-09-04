@@ -48,11 +48,15 @@ unsigned long adcMillis,                   // Variable to store millis for adc, 
     logMillis,                             // Variable to store millis for log routine
     lastMillis,                            // Variable to store millis for energy and time running calculation
     i2cRefreshMillis;
-unsigned long dacVoltage,                  // Digital value of voltage DAC (0~5000) range
-    dacCurrent;                            // Digital value of current DAC (0~5000) range
-uint8_t encoderCounter = 0;                // Variable to store the prescaler counter for encoder routine on TIM4
-uint8_t dacCounter = 0;                    // Variable to store the prescaler counter for DAC increment/decrement routine on TIM4
-bool lastOpMode;                           // Used to detect change in CC/CV mode to beep status buzzer
+unsigned long dacVoltage,   // Digital value of voltage DAC (0~5000) range
+    dacCurrent;             // Digital value of current DAC (0~5000) range
+uint8_t encoderCounter = 0; // Variable to store the prescaler counter for encoder routine on TIM4
+uint8_t dacCounter = 0;     // Variable to store the prescaler counter for DAC increment/decrement routine on TIM4
+bool lastOpMode;            // Used to detect change in CC/CV mode to beep status buzzer
+
+int16_t voltageADC, // Variable to store ADC value of voltage channel
+    currentADC;     // Variable to store ADC value of current channel
+uint16_t adcTimeoutCounter = 0; // Variable to store total count of ADC timeout occurrence
 
 void setupPWM();                                                               // Function to begin setup of PWM and timers
 static void MX_GPIO_Init(void);                                                // Function to begin setup of every GPIO
@@ -60,13 +64,14 @@ void timer4Interrupt(void);                                                    /
 void fanHandler();                                                             // Function to handle the PWM value of fan based on bjt temperature (LO1) and sensed load current (LO2)
 float mapf(float x, float in_min, float in_max, float out_min, float out_max); // float version of map()
 void display_mallinfo(void);
-unsigned long malMillis;
+void refreshI2C();
 
 void setup()
 {
   Serial.begin(115200);
   Wire.setSDA(LCD_SDA);
   Wire.setSCL(LCD_SCL);
+  // Wire.setClock(100000);
   MX_GPIO_Init();
   analogReadResolution(12); // set ADC resolution to 12 bit (0~4095) range
 
@@ -101,13 +106,11 @@ void loop()
   encoder.service();
 
   ClickEncoder::Button b = loadButton.getButton();
-
-  // Refresh I2C Line every I2C_REFRESH_INTERVAL (5m) or when ldButton double click
-  if(millis() - i2cRefreshMillis >= I2C_REFRESH_INTERVAL || b == ClickEncoder::DoubleClicked){
+  // Refresh I2C Line every I2C_REFRESH_INTERVAL (30m) or when ldButton double click
+  if (millis() - i2cRefreshMillis >= I2C_REFRESH_INTERVAL || b == ClickEncoder::DoubleClicked)
+  {
     i2cRefreshMillis = millis();
-    LCD_SCREEN currentScreen = lcd.getScreen(); // Store current screen because begin reset screen to SCREEN_MAIN
-    lcd.begin(); // LCD begin already cover I2C Wire.begin();
-    lcd.setScreen(currentScreen);
+    refreshI2C();
   }
 
   // If there is opMode change and ldStatus is ON and no current active buzzer beep, then beep the buzzer
@@ -202,9 +205,21 @@ void loop()
     fanHandler();
 
     // Read ADC of voltage, current and NTC1
-    int16_t val_0 = ADS.readADC(ADC_VOLTAGE_CHANNEL);                      // Read ADC voltage
-    int16_t val_1 = ADS.readADC(ADC_CURRENT_CHANNEL) + ADC_CURRENT_OFFSET; // Add current offset to make calculation work (because 0mA output negative voltage and may mess calculation)
-    int16_t ntc1 = analogRead(NTC1);                                       // 12-bit
+    int16_t vread = ADS.readADC(ADC_VOLTAGE_CHANNEL);                      // Read ADC voltage
+    int16_t iread = ADS.readADC(ADC_CURRENT_CHANNEL) + ADC_CURRENT_OFFSET; // Add current offset to make calculation work (because 0mA output negative voltage and may mess calculation)
+    if (vread != ADS.getErrorValue())
+      voltageADC = vread;
+    if (iread != ADS.getErrorValue())
+      currentADC = iread;
+    if (vread == ADS.getErrorValue() || iread == ADS.getErrorValue())
+    {
+      adcTimeoutCounter++;
+      if (adcTimeoutCounter % 10 == 0)
+        refreshI2C();
+      if (adcTimeoutCounter >= 10000)
+        adcTimeoutCounter = 0;
+    }
+    int16_t ntc1 = analogRead(NTC1); // 12-bit
 
     if (raVoltage.getCount() >= 65500)
     {
@@ -221,13 +236,13 @@ void loop()
     }
 
     // Add new read out to running average
-    raVoltage.addValue(float(val_0) * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor);
-    raCurrent.addValue(float(val_1) * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor);
+    raVoltage.addValue(float(voltageADC) * adcLSBSize * ADC_VOLTAGE_BASE_FACTOR * sensedVoltageFactor); // Uses gain to compute actual result on output terminal
+    raCurrent.addValue(float(currentADC) * ADC_LSB_TO_CURRENT_MA * sensedCurrentFactor);                // in mA, Directly transform ADC read out to current by multiplying with ADC_LSB_TO_CURRENT_MA
 
     // Calculate each sensed voltage,current and power
-    sensedVoltage = raVoltage.getAverage(); // Uses gain to compute actual result on output terminal
-    sensedCurrent = raCurrent.getAverage();                // in mA, Directly transform ADC read out to current by multiplying with ADC_LSB_TO_CURRENT_MA
-    sensedPower = sensedVoltage * (sensedCurrent / 1000);                                                // P = V*I, since I is on mA we need to divide by 1000
+    sensedVoltage = raVoltage.getAverage();
+    sensedCurrent = raCurrent.getAverage();
+    sensedPower = sensedVoltage * (sensedCurrent / 1000); // P = V*I, since I is on mA we need to divide by 1000
 
     // Convert binary presetDAC to real voltage/current value
     presetVoltage = DAC_VOLTAGE_BASE_FACTOR * presetVoltageDAC * presetVoltageFactor;
@@ -262,6 +277,7 @@ void loop()
   }
   // Store current variable to detect changes on next loop
   lastOpMode = opMode;
+  // Reload watchdog counter
   IWatchdog.reload();
 }
 
@@ -326,6 +342,14 @@ void setupPWM()
 
   pwmTimer->resume();
   fanTimer->resume();
+}
+
+void refreshI2C()
+{
+  IWatchdog.reload();                         // Reset watchdog counter before, because following procedures might take times
+  LCD_SCREEN currentScreen = lcd.getScreen(); // Store current screen because begin reset screen to SCREEN_MAIN
+  lcd.begin();                                // LCD begin already cover I2C Wire.begin();
+  lcd.setScreen(currentScreen);
 }
 
 static void MX_GPIO_Init(void)

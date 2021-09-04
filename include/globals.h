@@ -12,8 +12,8 @@
 #include <IWatchdog.h>
 #include <malloc.h>
 
-#define WATCHDOG_TIMEOUT 4000000 // in uS (4s)
-#define I2C_REFRESH_INTERVAL 300000 // in ms (300s/5m)
+#define WATCHDOG_TIMEOUT 6000000 // in uS (6s)
+#define I2C_REFRESH_INTERVAL 1800000 // in ms (30m)
 
 #define PIN_DEFINE // DO NOT DELETE
 
@@ -143,6 +143,7 @@ extern float presetVoltageFactor, // EEPROM address 12. Stored on EEPROM on save
     presetCurrentFactor,          // EEPROM address 16. Stored on EEPROM on save, preset current will be multiplied by this factor before shown on LCD
     sensedCurrentFactor,          // EEPROM address 20. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
     sensedVoltageFactor;          // EEPROM address 24. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
+extern uint16_t adcTimeoutCounter;
 
 extern "C" char *sbrk(int i);
 /* Use linker definition */
