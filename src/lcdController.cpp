@@ -321,9 +321,13 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
         char *stack_ptr = (char *)__get_MSP();
         struct mallinfo mi = mallinfo();
         clcd.setCursor(0, 0);
-        clcd.printf("Timeout ADC:%d", adcTimeoutCounter);
+        clcd.printf("Used S:%d H:%d", usedStack,usedHeap);
         clcd.setCursor(0, 1);
-        clcd.printf("Free RAM:%d", ((stack_ptr < minSP) ? stack_ptr : minSP) - heapend + mi.fordblks);
+        clcd.printf("Free RAM:%d", freeRAM);
+        clcd.setCursor(0,2);
+        clcd.printf("Pgm RAM:%d", usedPgm);
+        clcd.setCursor(0,3);
+        clcd.printf("Max Heap:%d", highestHeapUsage);
         clcd.setCursor(15, 3);
         clcd.printf("%cBack", ARROW_SYMBOL);
     }

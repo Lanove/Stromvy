@@ -28,6 +28,8 @@ float presetVoltageFactor,            // EEPROM address 12. Stored on EEPROM on 
     sensedCurrentFactor,              // EEPROM address 20. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
     sensedVoltageFactor;              // EEPROM address 24. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
 
+unsigned long usedHeap, usedStack, usedPgm, freeRAM, mallinfoMillis, highestHeapUsage;
+
 DigitalButton loadButton(LD_BTN); // Object for load button
 
 lcdControllerClass lcd;             // Object for lcdController
@@ -54,8 +56,8 @@ uint8_t encoderCounter = 0; // Variable to store the prescaler counter for encod
 uint8_t dacCounter = 0;     // Variable to store the prescaler counter for DAC increment/decrement routine on TIM4
 bool lastOpMode;            // Used to detect change in CC/CV mode to beep status buzzer
 
-int16_t voltageADC, // Variable to store ADC value of voltage channel
-    currentADC;     // Variable to store ADC value of current channel
+int16_t voltageADC,             // Variable to store ADC value of voltage channel
+    currentADC;                 // Variable to store ADC value of current channel
 uint16_t adcTimeoutCounter = 0; // Variable to store total count of ADC timeout occurrence
 
 void setupPWM();                                                               // Function to begin setup of PWM and timers
@@ -77,6 +79,7 @@ void setup()
   lcd.begin();
   eeprom.begin();
   eeprom.fetch();
+  eeprom.fetchMallinfo();
   encoder.begin();
   setupPWM();
   indicator.begin();
@@ -104,13 +107,31 @@ void loop()
   lcd.service();
   encoder.service();
 
+  if (millis() - mallinfoMillis >= 1000)
+  {
+    mallinfoMillis = millis();
+    static char *ramstart = &_sdata;
+    static char *ramend = &_estack;
+    static char *minSP = (char *)(ramend - &_Min_Stack_Size);
+    char *heapend = (char *)sbrk(0);
+    char *stack_ptr = (char *)__get_MSP();
+    struct mallinfo mi = mallinfo();
+    usedStack = ramend - stack_ptr;
+    usedHeap = mi.uordblks;
+    usedPgm = &_end - ramstart;
+    freeRAM = ((stack_ptr < minSP) ? stack_ptr : minSP) - heapend + mi.fordblks;
+    if(usedHeap > highestHeapUsage){
+      highestHeapUsage = usedHeap;
+      eeprom.writeMallinfo();
+    }
+  }
+
   ClickEncoder::Button b = loadButton.getButton();
   // Refresh I2C Line every I2C_REFRESH_INTERVAL (30m) or when ldButton double click
   if (millis() - i2cRefreshMillis >= I2C_REFRESH_INTERVAL || b == ClickEncoder::DoubleClicked)
   {
     i2cRefreshMillis = millis();
     refreshI2C();
-    display_mallinfo();
   }
 
   // If there is opMode change and ldStatus is ON and no current active buzzer beep, then beep the buzzer

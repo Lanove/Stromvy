@@ -4,13 +4,27 @@ Eeprom24C04_16 _eeprom(EEPROM_ADDRESS);
 
 void eepromControllerClass::begin()
 {
+    bool eepromUninitialized = true;
     _eeprom.initialize();
+    _eeprom.readBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer.data());
+    // if EEPROM is empty (all value is 0xFF) then set each used address bytes to 0x00
+    if (count(outputBuffer.begin(), outputBuffer.end(), 0xFF) >= EEPROM_TOTAL_ADDRESS)
+    {
+        fill(outputBuffer.begin(), outputBuffer.end(), 0x00);
+        _eeprom.writeBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer.data());
+    }
+    _eeprom.readBytes(100, sizeof(highestHeapUsage), buffer.data());
+    if (count(buffer.begin(), buffer.end(), 0xFF) >= sizeof(highestHeapUsage))
+    {
+        fill(buffer.begin(), buffer.end(), 0x00);
+        _eeprom.writeBytes(100, sizeof(highestHeapUsage), buffer.data());
+    }
 }
 
 void eepromControllerClass::fetch()
 {
     // Store to outputBuffer
-    _eeprom.readBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer);
+    _eeprom.readBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer.data());
 
     // Copy binary values from EEPROM that is stored on outputBuffer to each associated variables
     memcpy(&minPWMLO1, &outputBuffer[0], sizeof(int8_t));
@@ -60,7 +74,26 @@ void eepromControllerClass::update()
         memcpy(&outputBuffer[16], &presetCurrentFactor, sizeof(float));
         memcpy(&outputBuffer[20], &sensedVoltageFactor, sizeof(float));
         memcpy(&outputBuffer[24], &sensedCurrentFactor, sizeof(float));
-        _eeprom.writeBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer);
+        _eeprom.writeBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer.data());
         fetch();
+    }
+}
+
+void eepromControllerClass::fetchMallinfo()
+{
+    size_t _size = sizeof(highestHeapUsage);
+    _eeprom.readBytes(100, _size, buffer.data());
+    memcpy(&highestHeapUsage, buffer.data(), _size);
+    lastHighestHeapUsage = highestHeapUsage;
+}
+
+void eepromControllerClass::writeMallinfo()
+{
+    if (lastHighestHeapUsage != highestHeapUsage)
+    {
+        size_t _size = sizeof(highestHeapUsage);
+        memcpy(buffer.data(), &highestHeapUsage, _size);
+        _eeprom.writeBytes(100, _size, buffer.data());
+        fetchMallinfo();
     }
 }

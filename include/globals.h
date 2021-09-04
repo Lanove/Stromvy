@@ -1,5 +1,3 @@
-#ifndef GLOBALS_H
-#define GLOBALS_H
 #include <Arduino.h>
 #include <encoderController.h>
 #include <lcdController.h>
@@ -14,7 +12,7 @@
 #include <IWatchdog.h>
 #include <malloc.h>
 
-#define WATCHDOG_TIMEOUT 6000000 // in uS (6s)
+#define WATCHDOG_TIMEOUT 6000000     // in uS (6s)
 #define I2C_REFRESH_INTERVAL 1800000 // in ms (30m)
 
 #define PIN_DEFINE // DO NOT DELETE
@@ -142,10 +140,11 @@ extern float presetVoltageFactor, // EEPROM address 12. Stored on EEPROM on save
     sensedVoltageFactor;          // EEPROM address 24. Stored on EEPROM on save, sensed voltage will be multiplied by this factor before shown on LCD
 extern uint16_t adcTimeoutCounter;
 
+extern unsigned long usedHeap, usedStack, usedPgm, freeRAM, highestHeapUsage;
+
 extern "C" char *sbrk(int i);
 /* Use linker definition */
 extern char _end;
 extern char _sdata;
 extern char _estack;
 extern char _Min_Stack_Size;
-#endif
