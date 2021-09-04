@@ -190,6 +190,29 @@ void lcdControllerClass::service()
                 clcd.printf("%04.0fmA", sensedCurrent);
             }
         }
+        else if (screen == SCREEN_DEBUG)
+        {
+            if (lastUsedStack != usedStack || lastUsedHeap != usedHeap)
+            {
+                clcd.setCursor(0, 0);
+                clcd.printf("Used S:%d H:%d", usedStack, usedHeap);
+            }
+            if (lastFreeRAM != freeRAM)
+            {
+                clcd.setCursor(9, 1);
+                clcd.printf("%d", freeRAM);
+            }
+            if (lastUsedPgm != usedPgm)
+            {
+                clcd.setCursor(8, 2);
+                clcd.printf("%d", usedPgm);
+            }
+            if (lastHighestHeapUsage != highestHeapUsage)
+            {
+                clcd.setCursor(9, 3);
+                clcd.printf("%d", highestHeapUsage);
+            }
+        }
 
         lastCursorBlink = cursorBlink;
         lastCursor = cursor;
@@ -218,6 +241,11 @@ void lcdControllerClass::service()
         lastPresetCurrentFactor = presetCurrentFactor;
         lastSensedVoltageFactor = sensedVoltageFactor;
         lastSensedCurrentFactor = sensedCurrentFactor;
+        lastHighestHeapUsage = highestHeapUsage;
+        lastUsedStack = usedStack;
+        lastUsedHeap = usedHeap;
+        lastUsedPgm = usedPgm;
+        lastFreeRAM = freeRAM;
     }
     if (millis() - blinkMillis >= ARROW_BLINK_INTERVAL && cursorBlink)
     {
@@ -263,7 +291,7 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
         else
             clcd.printf(" Timer: %02d:%02d:%02d Rst", (int)timerDuration / 3600, (int)timerDuration % 3600 / 60, (int)timerDuration % 60);
         clcd.setCursor(0, 3);
-        clcd.printf(" Data Logging    Dbg");
+        clcd.printf(" Data Logging    Mem");
     }
     else if (screen == SCREEN_ENERGY)
     {
@@ -314,19 +342,13 @@ void lcdControllerClass::setScreen(LCD_SCREEN screen_)
     }
     else if (screen == SCREEN_DEBUG)
     {
-        static char *ramstart = &_sdata;
-        static char *ramend = &_estack;
-        static char *minSP = (char *)(ramend - &_Min_Stack_Size);
-        char *heapend = (char *)sbrk(0);
-        char *stack_ptr = (char *)__get_MSP();
-        struct mallinfo mi = mallinfo();
         clcd.setCursor(0, 0);
-        clcd.printf("Used S:%d H:%d", usedStack,usedHeap);
+        clcd.printf("Used S:%d H:%d", usedStack, usedHeap);
         clcd.setCursor(0, 1);
         clcd.printf("Free RAM:%d", freeRAM);
-        clcd.setCursor(0,2);
+        clcd.setCursor(0, 2);
         clcd.printf("Pgm RAM:%d", usedPgm);
-        clcd.setCursor(0,3);
+        clcd.setCursor(0, 3);
         clcd.printf("Max Heap:%d", highestHeapUsage);
         clcd.setCursor(15, 3);
         clcd.printf("%cBack", ARROW_SYMBOL);

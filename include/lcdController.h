@@ -108,6 +108,7 @@ private:
         lastPresetCurrentFactor;
     float lastSensedVoltageFactor,
         lastSensedCurrentFactor;
+    unsigned long lastUsedStack,lastUsedHeap,lastUsedPgm,lastFreeRAM,lastHighestHeapUsage;
     void drawCursor(int8_t position, bool display = true);
 
 public:

@@ -133,6 +133,9 @@ void loop()
     i2cRefreshMillis = millis();
     refreshI2C();
   }
+  
+  if(b == ClickEncoder::Released)
+    display_mallinfo();
 
   // If there is opMode change and ldStatus is ON and no current active buzzer beep, then beep the buzzer
   if (opMode != lastOpMode && ldStatus == STATUS_ON && !indicator.getBeepFlag())
