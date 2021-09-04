@@ -31,7 +31,6 @@ typedef enum
 class lcdControllerClass
 {
 private:
-    LiquidCrystal_I2C *clcd; // Variable to store the lcd object
     uint32_t refreshMillis;  // Variable to store the milis for lcd refresh
     uint32_t blinkMillis;    // Variable to store the millis for cursor blink
     LCD_SCREEN screen;       // Variable to store the lcd screen position
@@ -112,9 +111,6 @@ private:
     void drawCursor(int8_t position, bool display = true);
 
 public:
-    lcdControllerClass();
-    ~lcdControllerClass();
-
     void begin();
     void service();
 

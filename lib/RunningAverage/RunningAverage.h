@@ -62,7 +62,7 @@ protected:
   uint16_t _index;
   uint16_t _partial;
   float    _sum;
-  float*   _array;
+  float   _array[20];
   float    _min;
   float    _max;
 };

@@ -1,3 +1,5 @@
+#ifndef GLOBALS_H
+#define GLOBALS_H
 #include <Arduino.h>
 #include <encoderController.h>
 #include <lcdController.h>
@@ -77,9 +79,6 @@
 
 #ifdef PIN_DEFINE
 
-#define LED_R PB7
-#define LED_G PB5
-#define LED_B PB6
 #define LED_PC13 PC13
 
 #define ENC_CLK PB4
@@ -107,8 +106,6 @@
 #define I_SET PB8
 #define V_SET PB9
 #endif
-
-extern HardwareTimer *ledTimer; // used for indicatorControllerClass
 
 extern int presetVoltageDAC, // Variable to store digital value (0~5000) of preset voltage
     presetCurrentDAC;        // Variable to store digital value (0~5000) of preset current
@@ -151,3 +148,4 @@ extern char _end;
 extern char _sdata;
 extern char _estack;
 extern char _Min_Stack_Size;
+#endif

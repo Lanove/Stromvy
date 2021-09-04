@@ -44,6 +44,11 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "errno.h": "c",
+        "stat.h": "c",
+        "stm32_def.h": "c",
+        "stm32f1xx.h": "c",
+        "stm32f103xb.h": "c"
     }
 }

@@ -1,0 +1,7 @@
+/*
+RAM Start at:       0x20000000
+Data/Bss end at:    0x200008B8
+Heap end at:        0x20000F68
+Stack Ptr end at:   0x20004F28
+RAM End at:         0x20005000
+*/

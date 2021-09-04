@@ -1,17 +1,16 @@
 #include <eepromController.h>
 
-eepromControllerClass::eepromControllerClass() {}
-eepromControllerClass::~eepromControllerClass() {delete eep; }
+Eeprom24C04_16 _eeprom(EEPROM_ADDRESS);
 
 void eepromControllerClass::begin()
 {
-    eep = new Eeprom24C04_16(EEPROM_ADDRESS);
-    eep->initialize();
+    _eeprom.initialize();
 }
+
 void eepromControllerClass::fetch()
 {
     // Store to outputBuffer
-    eep->readBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer);
+    _eeprom.readBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer);
 
     // Copy binary values from EEPROM that is stored on outputBuffer to each associated variables
     memcpy(&minPWMLO1, &outputBuffer[0], sizeof(int8_t));
@@ -61,7 +60,7 @@ void eepromControllerClass::update()
         memcpy(&outputBuffer[16], &presetCurrentFactor, sizeof(float));
         memcpy(&outputBuffer[20], &sensedVoltageFactor, sizeof(float));
         memcpy(&outputBuffer[24], &sensedCurrentFactor, sizeof(float));
-        eep->writeBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer);
+        _eeprom.writeBytes(0, EEPROM_TOTAL_ADDRESS, outputBuffer);
         fetch();
     }
 }

@@ -1,16 +1,10 @@
 #include "encoderController.h"
 
-encoderControllerClass::encoderControllerClass()
-{
-}
-encoderControllerClass::~encoderControllerClass()
-{
-    delete enc;
-}
+ClickEncoder enc(ENC_CLK, ENC_DT, ENC_BTN, ENC_STEPS);
+
 void encoderControllerClass::begin()
 {
-    enc = new ClickEncoder(ENC_CLK, ENC_DT, ENC_BTN, ENC_STEPS);
-    enc->setAccelerationEnabled(false);
+    enc.setAccelerationEnabled(false);
 }
 
 void encoderControllerClass::service()
@@ -20,16 +14,16 @@ void encoderControllerClass::service()
     bool blinkFlag = lcd.getArrowBlink();
 
     // Apply acceleration only when changing value of variable, not when navigating the interface
-    enc->setAccelerationEnabled(blinkFlag);
+    enc.setAccelerationEnabled(blinkFlag);
 
     // Store variables
-    encoderValue += enc->getValue();
+    encoderValue += enc.getValue();
     encoderDelta = encoderValue - oldEncoderValue;
     if (encoderValue != oldEncoderValue)
         isMoved = true;
     else
         isMoved = false;
-    btnState = enc->getButton();
+    btnState = enc.getButton();
 
     if (btnState == ClickEncoder::Clicked) // Screen move navigations (consult to LCD User Interface.xlsx)
     {
@@ -58,7 +52,7 @@ void encoderControllerClass::service()
             (screen == SCREEN_LOG && cursor == 2) ||
             (screen == SCREEN_ENERGY && cursor == 1) ||
             (screen == SCREEN_FAN && cursor == 6) ||
-            (screen == SCREEN_CAL && cursor == 6) || 
+            (screen == SCREEN_CAL && cursor == 6) ||
             (screen == SCREEN_DEBUG && cursor == 0))
         {
             lcd.setScreen(SCREEN_MENU);

@@ -35,8 +35,8 @@ encoderControllerClass encoder;     // Object for encoderController
 eepromControllerClass eeprom;       // Object for eepromController
 indicatorControllerClass indicator; // Object for indicatorController
 
-HardwareTimer *pwmTimer = new HardwareTimer(TIM4); // Object pointer for pwmTimer on TIMER4
-HardwareTimer *fanTimer = new HardwareTimer(TIM3); // Object pointer for fanTimer on TIMER3
+HardwareTimer pwmTimer(TIM4); // Object pointer for pwmTimer on TIMER4
+HardwareTimer fanTimer(TIM3); // Object pointer for fanTimer on TIMER3
 
 ADS1115 ADS(ADS1115_ADDRESS);               // Object for ADS1115 16-bit ADC
 RunningAverage raVoltage(ADC_SAMPLE_COUNT); // Object for sensed voltage running average
@@ -71,7 +71,6 @@ void setup()
   Serial.begin(115200);
   Wire.setSDA(LCD_SDA);
   Wire.setSCL(LCD_SCL);
-  // Wire.setClock(100000);
   MX_GPIO_Init();
   analogReadResolution(12); // set ADC resolution to 12 bit (0~4095) range
 
@@ -111,6 +110,7 @@ void loop()
   {
     i2cRefreshMillis = millis();
     refreshI2C();
+    display_mallinfo();
   }
 
   // If there is opMode change and ldStatus is ON and no current active buzzer beep, then beep the buzzer
@@ -193,8 +193,8 @@ void loop()
   if (millis() - dacMillis >= DAC_UPDATE_INTERVAL)
   {
     dacMillis = millis();
-    pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, (ldStatus == STATUS_ON) ? uint32_t(float(dacCurrent)) : 0);
-    pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, (ldStatus == STATUS_ON) ? uint32_t(float(dacVoltage)) : 0);
+    pwmTimer.setCaptureCompare(I_SET_TIMER_CHANNEL, (ldStatus == STATUS_ON) ? uint32_t(float(dacCurrent)) : 0);
+    pwmTimer.setCaptureCompare(V_SET_TIMER_CHANNEL, (ldStatus == STATUS_ON) ? uint32_t(float(dacVoltage)) : 0);
   }
 
   // ADC-FAN-energy counter routine
@@ -294,8 +294,8 @@ void fanHandler()
   if (pwmLO2 > 100)
     pwmLO2 = 100;
   // Apply changes
-  fanTimer->setCaptureCompare(LOGIC_OUTPUT1_TIMER_CHANNEL, pwmLO1, PERCENT_COMPARE_FORMAT);
-  fanTimer->setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, pwmLO2, PERCENT_COMPARE_FORMAT);
+  fanTimer.setCaptureCompare(LOGIC_OUTPUT1_TIMER_CHANNEL, pwmLO1, PERCENT_COMPARE_FORMAT);
+  fanTimer.setCaptureCompare(LOGIC_OUTPUT2_TIMER_CHANNEL, pwmLO2, PERCENT_COMPARE_FORMAT);
 }
 
 void timer4Interrupt(void)
@@ -318,7 +318,7 @@ void timer4Interrupt(void)
   if (encoderCounter >= TIM4_ENCODER_PRESCALER)
   {
     encoderCounter = 0;
-    encoder.enc->service();
+    enc.service();
     loadButton.service();
   }
 }
@@ -326,22 +326,22 @@ void timer4Interrupt(void)
 void setupPWM()
 {
   // == TIM_OCMODE_PWM1             pin high when counter < channel compare, high otherwise
-  pwmTimer->setMode(I_SET_TIMER_CHANNEL, TIMER_OUTPUT_COMPARE_PWM1, I_SET);
-  pwmTimer->setMode(V_SET_TIMER_CHANNEL, TIMER_OUTPUT_COMPARE_PWM1, V_SET);
-  fanTimer->setMode(LOGIC_OUTPUT1_TIMER_CHANNEL, TIMER_OUTPUT_COMPARE_PWM1, LOGIC_OUTPUT1);
-  fanTimer->setMode(LOGIC_OUTPUT2_TIMER_CHANNEL, TIMER_OUTPUT_COMPARE_PWM1, LOGIC_OUTPUT2);
+  pwmTimer.setMode(I_SET_TIMER_CHANNEL, TIMER_OUTPUT_COMPARE_PWM1, I_SET);
+  pwmTimer.setMode(V_SET_TIMER_CHANNEL, TIMER_OUTPUT_COMPARE_PWM1, V_SET);
+  fanTimer.setMode(LOGIC_OUTPUT1_TIMER_CHANNEL, TIMER_OUTPUT_COMPARE_PWM1, LOGIC_OUTPUT1);
+  fanTimer.setMode(LOGIC_OUTPUT2_TIMER_CHANNEL, TIMER_OUTPUT_COMPARE_PWM1, LOGIC_OUTPUT2);
   // Pwm frequency is calculated with by dividing PWM Clock (72MHz) with ARR/overflow tick
   // set PWM frequency to 14.4kHz (72MHz/5000=14.4KHz)
-  pwmTimer->setOverflow(5000); // in TICK FORMAT
-  pwmTimer->attachInterrupt(timer4Interrupt);
+  pwmTimer.setOverflow(5000); // in TICK FORMAT
+  pwmTimer.attachInterrupt(timer4Interrupt);
   // set fan PWM frequency to 100Hz
-  fanTimer->setOverflow(100, HERTZ_FORMAT); // in Hertz
+  fanTimer.setOverflow(100, HERTZ_FORMAT); // in Hertz
 
-  pwmTimer->setCaptureCompare(I_SET_TIMER_CHANNEL, 0);
-  pwmTimer->setCaptureCompare(V_SET_TIMER_CHANNEL, 0);
+  pwmTimer.setCaptureCompare(I_SET_TIMER_CHANNEL, 0);
+  pwmTimer.setCaptureCompare(V_SET_TIMER_CHANNEL, 0);
 
-  pwmTimer->resume();
-  fanTimer->resume();
+  pwmTimer.resume();
+  fanTimer.resume();
 }
 
 void refreshI2C()

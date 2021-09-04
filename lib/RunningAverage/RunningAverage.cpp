@@ -44,15 +44,12 @@ RunningAverage::RunningAverage(const uint16_t size)
 {
   _size = size;
   _partial = _size;
-  _array = (float*) malloc(_size * sizeof(float));
-  if (_array == NULL) _size = 0;
   clear();
 }
 
 
 RunningAverage::~RunningAverage()
 {
-  if (_array != NULL) free(_array);
 }
 
 
